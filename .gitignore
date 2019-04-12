@@ -1,0 +1,15 @@
+# Pester and coverage output
+TestResults*.xml
+coverage*.xml
+*.log
+*.tmp
+
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# local report output
+/out/
+/reports/
