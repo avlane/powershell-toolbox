@@ -70,9 +70,8 @@ function Get-PtServiceTriage {
     .DESCRIPTION
     Uses Win32_Service on each computer and returns the automatic services that are
     stopped, together with the account they run as and the exit code of their
-    last run. Services that start with a delayed trigger (DelayedAutoStart) and
-    well-known ones that are meant to stop themselves are left out unless
-    -IncludeExpected is given.
+    last run. A short list of well-known services that are meant to stop
+    themselves after doing their work is left out unless -IncludeExpected is given.
 
     .PARAMETER ComputerName
     The computers to query. Defaults to the local computer.
