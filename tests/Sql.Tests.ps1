@@ -8,7 +8,8 @@ function global:Invoke-Sqlcmd { param($ServerInstance, $Database, $Query, $Query
 
 Import-Module $manifest -Force
 
-function New-TestDataRow {
+# global, so the module-scoped mocks below can call it
+function global:New-TestDataRow {
     param([System.Collections.Specialized.OrderedDictionary]$Values)
     $table = New-Object -TypeName System.Data.DataTable
     foreach ($name in $Values.Keys) { [void]$table.Columns.Add($name, [object]) }
@@ -89,8 +90,10 @@ Describe 'Invoke-PtSqlQuery' {
 }
 
 Describe 'Get-PtBackupStatus' {
-    $now = [datetime]'2019-08-01 12:00:00'
+    # mock bodies run in the module's scope and cannot see variables of this Describe,
+    # so the "current" time is defined inside the mock
     Mock Invoke-PtSqlQuery -ModuleName PowerShellToolbox {
+        $now = [datetime]'2019-08-01 12:00:00'
         @(
             [pscustomobject]@{ DatabaseName = 'Sales'; RecoveryModel = 'FULL'; ServerTime = $now; LastFull = $now.AddHours(-10); LastDiff = $null; LastLog = $now.AddMinutes(-10) },
             [pscustomobject]@{ DatabaseName = 'Old'; RecoveryModel = 'SIMPLE'; ServerTime = $now; LastFull = $now.AddDays(-7); LastDiff = $null; LastLog = $null },
