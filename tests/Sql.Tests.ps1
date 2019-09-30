@@ -20,22 +20,25 @@ function global:New-TestDataRow {
     , $row
 }
 
-Describe 'ConvertFrom-PtDataRow' {
-    $row = New-TestDataRow ([ordered]@{ Name = 'master'; Size = 8; Notes = [System.DBNull]::Value })
-    $object = ConvertFrom-PtDataRow -Row $row -ServerInstance 'SQLPROD01'
+# ConvertFrom-PtDataRow is internal, so these tests run inside the module
+InModuleScope PowerShellToolbox {
+    Describe 'ConvertFrom-PtDataRow' {
+        $row = New-TestDataRow ([ordered]@{ Name = 'master'; Size = 8; Notes = [System.DBNull]::Value })
+        $object = ConvertFrom-PtDataRow -Row $row -ServerInstance 'SQLPROD01'
 
-    It 'puts the server first and keeps the column order' {
-        @($object.PSObject.Properties.Name) -join ',' | Should -Be 'ServerInstance,Name,Size,Notes'
-    }
+        It 'puts the server first and keeps the column order' {
+            @($object.PSObject.Properties.Name) -join ',' | Should -Be 'ServerInstance,Name,Size,Notes'
+        }
 
-    It 'copies values' {
-        $object.Name | Should -Be 'master'
-        $object.Size | Should -Be 8
-    }
+        It 'copies values' {
+            $object.Name | Should -Be 'master'
+            $object.Size | Should -Be 8
+        }
 
-    It 'turns DBNull into $null' {
-        $object.Notes | Should -BeNullOrEmpty
-        $object.Notes -is [System.DBNull] | Should -Be $false
+        It 'turns DBNull into $null' {
+            $object.Notes | Should -BeNullOrEmpty
+            $object.Notes -is [System.DBNull] | Should -Be $false
+        }
     }
 }
 

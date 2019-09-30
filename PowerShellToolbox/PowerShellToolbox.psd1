@@ -6,7 +6,14 @@
     Copyright         = '(c) 2019 Avery Lane. MIT License.'
     Description       = 'Small admin helpers: disk, service and event log reports, SQL Server status queries.'
     PowerShellVersion = '5.1'
-    FunctionsToExport = '*'
+    FunctionsToExport = @(
+        'Get-PtBackupStatus',
+        'Get-PtCertificateExpiry',
+        'Get-PtDiskReport',
+        'Get-PtEventLogSummary',
+        'Get-PtServiceTriage',
+        'Invoke-PtSqlQuery'
+    )
     CmdletsToExport   = @()
     VariablesToExport = @()
     AliasesToExport   = @()
