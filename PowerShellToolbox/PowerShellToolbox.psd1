@@ -7,6 +7,7 @@
     Description       = 'Small admin helpers: disk, service and event log reports, SQL Server status queries.'
     PowerShellVersion = '5.1'
     FunctionsToExport = @(
+        'Get-PtAzureInventory',
         'Get-PtBackupStatus',
         'Get-PtCertificateExpiry',
         'Get-PtDiskReport',

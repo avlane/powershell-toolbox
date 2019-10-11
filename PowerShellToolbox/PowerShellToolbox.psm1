@@ -526,3 +526,69 @@ function Get-PtCertificateExpiry {
         }
     }
 }
+
+function Get-PtAzureInventory {
+    <#
+    .SYNOPSIS
+    Lists the Azure resources in one or more subscriptions, with their tags.
+
+    .DESCRIPTION
+    Uses the AzureRM module (Install-Module AzureRM) and the account you are
+    already signed in with (Login-AzureRmAccount). For every subscription it
+    returns one object per resource: resource group, name, type, location and the
+    tags as a single "key=value; key=value" string, which is handy in a CSV.
+
+    .PARAMETER SubscriptionId
+    The subscriptions to read. Default: all that the account can see.
+
+    .PARAMETER ResourceGroupName
+    Only this resource group in each subscription.
+
+    .EXAMPLE
+    Get-PtAzureInventory | Export-Csv -Path .\inventory.csv -NoTypeInformation
+    #>
+    [CmdletBinding()]
+    param(
+        [string[]]$SubscriptionId,
+
+        [string]$ResourceGroupName
+    )
+
+    if (-not (Get-Command -Name Get-AzureRmContext -ErrorAction SilentlyContinue)) {
+        throw 'The AzureRM module is not installed. Install it with: Install-Module AzureRM'
+    }
+    if (-not (Get-AzureRmContext)) {
+        throw 'Not signed in to Azure. Run Login-AzureRmAccount first.'
+    }
+
+    if ($SubscriptionId) {
+        $subscriptions = @($SubscriptionId | ForEach-Object { Get-AzureRmSubscription -SubscriptionId $_ })
+    }
+    else {
+        $subscriptions = @(Get-AzureRmSubscription)
+    }
+
+    foreach ($subscription in $subscriptions) {
+        [void](Select-AzureRmSubscription -SubscriptionId $subscription.Id)
+
+        $parameters = @{}
+        if ($ResourceGroupName) { $parameters['ResourceGroupName'] = $ResourceGroupName }
+
+        foreach ($resource in (Get-AzureRmResource @parameters)) {
+            $tags = ''
+            if ($resource.Tags) {
+                $pairs = foreach ($tag in ($resource.Tags.GetEnumerator() | Sort-Object -Property Name)) { "$($tag.Name)=$($tag.Value)" }
+                $tags = $pairs -join '; '
+            }
+
+            [pscustomobject]@{
+                Subscription  = $subscription.Name
+                ResourceGroup = $resource.ResourceGroupName
+                Name          = $resource.Name
+                Type          = $resource.ResourceType
+                Location      = $resource.Location
+                Tags          = $tags
+            }
+        }
+    }
+}
