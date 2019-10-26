@@ -13,7 +13,8 @@
         'Get-PtDiskReport',
         'Get-PtEventLogSummary',
         'Get-PtServiceTriage',
-        'Invoke-PtSqlQuery'
+        'Invoke-PtSqlQuery',
+        'Remove-PtOldFile'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()
