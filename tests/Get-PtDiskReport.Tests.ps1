@@ -37,6 +37,35 @@ Describe 'Get-PtDiskReport' {
         }
     }
 
+    Context 'a volume whose size cannot be read' {
+        Mock Get-WmiObject -ModuleName PowerShellToolbox {
+            @(
+                [pscustomobject]@{ DeviceID = 'E:'; VolumeName = 'Locked'; Size = $null; FreeSpace = $null },
+                [pscustomobject]@{ DeviceID = 'F:'; VolumeName = 'Empty'; Size = 0; FreeSpace = 0 },
+                [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 5GB }
+            )
+        }
+
+        BeforeAll {
+            $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01')
+        }
+
+        It 'still reports every disk' {
+            $report.Count | Should -Be 3
+        }
+
+        It 'marks the unreadable ones Unknown' {
+            $report[0].Status | Should -Be 'Unknown'
+            $report[0].FreePercent | Should -BeNullOrEmpty
+            $report[1].Status | Should -Be 'Unknown'
+        }
+
+        It 'does not let them affect the readable disk' {
+            $report[2].Status | Should -Be 'Low'
+            $report[2].FreePercent | Should -Be 5
+        }
+    }
+
     Context 'a computer that cannot be reached' {
         Mock Get-WmiObject -ModuleName PowerShellToolbox { throw 'RPC server is unavailable' }
 

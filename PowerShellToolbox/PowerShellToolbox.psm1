@@ -7,7 +7,8 @@ function Get-PtDiskReport {
 
     .DESCRIPTION
     Queries Win32_LogicalDisk (fixed disks only, DriveType 3) with WMI and returns
-    one object per disk with size, free space and a status of OK or Low.
+    one object per disk with size, free space and a status of OK, Low or Unknown
+    (Unknown: the size could not be read).
 
     .PARAMETER ComputerName
     The computers to query. Defaults to the local computer.
@@ -45,15 +46,27 @@ function Get-PtDiskReport {
             }
 
             foreach ($disk in $disks) {
-                $freePercent = [math]::Round(($disk.FreeSpace / $disk.Size) * 100, 1)
-                if ($freePercent -lt $WarningPercent) { $status = 'Low' } else { $status = 'OK' }
+                # WMI returns no size for a volume it cannot read (a locked BitLocker
+                # volume, for example); dividing by that used to stop the whole report
+                if ($disk.Size -gt 0) {
+                    $freePercent = [math]::Round(($disk.FreeSpace / $disk.Size) * 100, 1)
+                    if ($freePercent -lt $WarningPercent) { $status = 'Low' } else { $status = 'OK' }
+                    $sizeGb = [math]::Round($disk.Size / 1GB, 1)
+                    $freeGb = [math]::Round($disk.FreeSpace / 1GB, 1)
+                }
+                else {
+                    $freePercent = $null
+                    $status = 'Unknown'
+                    $sizeGb = $null
+                    $freeGb = $null
+                }
 
                 [pscustomobject]@{
                     ComputerName = $computer
                     Drive        = $disk.DeviceID
                     Label        = $disk.VolumeName
-                    SizeGB       = [math]::Round($disk.Size / 1GB, 1)
-                    FreeGB       = [math]::Round($disk.FreeSpace / 1GB, 1)
+                    SizeGB       = $sizeGb
+                    FreeGB       = $freeGb
                     FreePercent  = $freePercent
                     Status       = $status
                 }
