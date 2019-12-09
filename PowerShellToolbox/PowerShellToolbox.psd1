@@ -14,6 +14,7 @@
         'Get-PtDiskReport',
         'Get-PtEventLogSummary',
         'Get-PtServiceTriage',
+        'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
         'Remove-PtOldFile'
     )
