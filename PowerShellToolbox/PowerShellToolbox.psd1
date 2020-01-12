@@ -8,6 +8,7 @@
     PowerShellVersion = '5.1'
     FunctionsToExport = @(
         'Export-PtReport',
+        'Get-PtAgentJobReport',
         'Get-PtAzureInventory',
         'Get-PtBackupStatus',
         'Get-PtCertificateExpiry',
