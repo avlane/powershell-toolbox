@@ -9,7 +9,7 @@ retries, an Azure inventory and a safe old-file cleaner.
 - Windows PowerShell 5.1 (the commands use WMI, the event log, the certificate
   provider and similar Windows features).
 - For the SQL commands: the `SqlServer` module (`Install-Module SqlServer`).
-- For `Get-PtAzureInventory`: the `AzureRM` module and a signed-in session.
+- For `Get-PtAzureInventory`: the `Az` module and a signed-in session (`Connect-AzAccount`).
 - For the tests: Pester 4 (`Install-Module Pester -RequiredVersion 4.10.1`).
 
 ## Using it
@@ -32,7 +32,7 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Invoke-PtSqlQuery` | run T-SQL on several instances, get plain objects back |
 | `Get-PtBackupStatus` | last full, differential and log backup per database, with a verdict |
 | `Get-PtCertificateExpiry` | certificates in a store with days until expiry |
-| `Get-PtAzureInventory` | resources and tags per subscription (AzureRM) |
+| `Get-PtAzureInventory` | resources and tags per subscription (Az) |
 | `Remove-PtOldFile` | delete old files with `-WhatIf` / `-Confirm` support |
 | `Export-PtReport` | write objects to CSV, JSON or HTML |
 | `Invoke-PtRestRetry` | `Invoke-RestMethod` with retries, back-off and Retry-After |

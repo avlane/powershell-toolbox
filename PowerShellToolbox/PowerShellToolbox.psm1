@@ -546,8 +546,8 @@ function Get-PtAzureInventory {
     Lists the Azure resources in one or more subscriptions, with their tags.
 
     .DESCRIPTION
-    Uses the AzureRM module (Install-Module AzureRM) and the account you are
-    already signed in with (Login-AzureRmAccount). For every subscription it
+    Uses the Az module (Install-Module Az) and the account you are already
+    signed in with (Connect-AzAccount). For every subscription it
     returns one object per resource: resource group, name, type, location and the
     tags as a single "key=value; key=value" string, which is handy in a CSV.
 
@@ -567,27 +567,27 @@ function Get-PtAzureInventory {
         [string]$ResourceGroupName
     )
 
-    if (-not (Get-Command -Name Get-AzureRmContext -ErrorAction SilentlyContinue)) {
-        throw 'The AzureRM module is not installed. Install it with: Install-Module AzureRM'
+    if (-not (Get-Command -Name Get-AzContext -ErrorAction SilentlyContinue)) {
+        throw 'The Az module is not installed. Install it with: Install-Module Az'
     }
-    if (-not (Get-AzureRmContext)) {
-        throw 'Not signed in to Azure. Run Login-AzureRmAccount first.'
+    if (-not (Get-AzContext)) {
+        throw 'Not signed in to Azure. Run Connect-AzAccount first.'
     }
 
     if ($SubscriptionId) {
-        $subscriptions = @($SubscriptionId | ForEach-Object { Get-AzureRmSubscription -SubscriptionId $_ })
+        $subscriptions = @($SubscriptionId | ForEach-Object { Get-AzSubscription -SubscriptionId $_ })
     }
     else {
-        $subscriptions = @(Get-AzureRmSubscription)
+        $subscriptions = @(Get-AzSubscription)
     }
 
     foreach ($subscription in $subscriptions) {
-        [void](Select-AzureRmSubscription -SubscriptionId $subscription.Id)
+        [void](Set-AzContext -SubscriptionId $subscription.Id)
 
         $parameters = @{}
         if ($ResourceGroupName) { $parameters['ResourceGroupName'] = $ResourceGroupName }
 
-        foreach ($resource in (Get-AzureRmResource @parameters)) {
+        foreach ($resource in (Get-AzResource @parameters)) {
             $tags = ''
             if ($resource.Tags) {
                 $pairs = foreach ($tag in ($resource.Tags.GetEnumerator() | Sort-Object -Property Name)) { "$($tag.Name)=$($tag.Value)" }
