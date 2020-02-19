@@ -14,6 +14,7 @@
         'Get-PtCertificateExpiry',
         'Get-PtDiskReport',
         'Get-PtEventLogSummary',
+        'Get-PtRestoreStatus',
         'Get-PtServiceTriage',
         'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
