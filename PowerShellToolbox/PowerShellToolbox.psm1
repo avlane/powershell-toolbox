@@ -1,4 +1,3 @@
-# PowerShellToolbox - small admin helpers for Windows PowerShell 5.1
 
 function Get-PtDiskReport {
     <#
@@ -6,7 +5,7 @@ function Get-PtDiskReport {
     Reports the free space on the fixed disks of one or more computers.
 
     .DESCRIPTION
-    Queries Win32_LogicalDisk (fixed disks only, DriveType 3) with WMI and returns
+    Queries Win32_LogicalDisk (fixed disks only, DriveType 3) with CIM and returns
     one object per disk with size, free space and a status of OK, Low or Unknown
     (Unknown: the size could not be read).
 
@@ -38,7 +37,7 @@ function Get-PtDiskReport {
     process {
         foreach ($computer in $ComputerName) {
             try {
-                $disks = Get-WmiObject -Class Win32_LogicalDisk -Filter 'DriveType = 3' -ComputerName $computer -ErrorAction Stop
+                $disks = Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType = 3' -ComputerName $computer -ErrorAction Stop
             }
             catch {
                 Write-Warning "Could not query $computer : $($_.Exception.Message)"
@@ -115,7 +114,7 @@ function Get-PtServiceTriage {
     process {
         foreach ($computer in $ComputerName) {
             try {
-                $services = Get-WmiObject -Class Win32_Service -Filter "StartMode = 'Auto' AND State <> 'Running'" -ComputerName $computer -ErrorAction Stop
+                $services = Get-CimInstance -ClassName Win32_Service -Filter "StartMode = 'Auto' AND State <> 'Running'" -ComputerName $computer -ErrorAction Stop
             }
             catch {
                 Write-Warning "Could not query $computer : $($_.Exception.Message)"

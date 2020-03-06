@@ -6,8 +6,9 @@ retries, an Azure inventory and a safe old-file cleaner.
 
 ## Requirements
 
-- Windows PowerShell 5.1 (the commands use WMI, the event log, the certificate
-  provider and similar Windows features).
+- Windows PowerShell 5.1, or PowerShell 7 on Windows (the commands use CIM, the
+  event log, the certificate provider and similar Windows features). Remote CIM
+  queries need WinRM on the target computers.
 - For the SQL commands: the `SqlServer` module (`Install-Module SqlServer`).
 - For `Get-PtAzureInventory`: the `Az` module and a signed-in session (`Connect-AzAccount`).
 - For the tests: Pester 4 (`Install-Module Pester -RequiredVersion 4.10.1`).
@@ -43,7 +44,7 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 Invoke-Pester .\tests
 ```
 
-The tests mock the commands that talk to other machines (`Get-WmiObject`,
+The tests mock the commands that talk to other machines (`Get-CimInstance`,
 `Invoke-Sqlcmd`) and use `TestDrive` for file operations. They are written for
 Pester 4.
 

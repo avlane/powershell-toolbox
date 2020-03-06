@@ -6,7 +6,7 @@ Import-Module $manifest -Force
 Describe 'Get-PtDiskReport' {
 
     Context 'a server with two fixed disks' {
-        Mock Get-WmiObject -ModuleName PowerShellToolbox {
+        Mock Get-CimInstance -ModuleName PowerShellToolbox {
             @(
                 [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 50GB },
                 [pscustomobject]@{ DeviceID = 'D:'; VolumeName = 'Data'; Size = 200GB; FreeSpace = 10GB }
@@ -38,7 +38,7 @@ Describe 'Get-PtDiskReport' {
     }
 
     Context 'a volume whose size cannot be read' {
-        Mock Get-WmiObject -ModuleName PowerShellToolbox {
+        Mock Get-CimInstance -ModuleName PowerShellToolbox {
             @(
                 [pscustomobject]@{ DeviceID = 'E:'; VolumeName = 'Locked'; Size = $null; FreeSpace = $null },
                 [pscustomobject]@{ DeviceID = 'F:'; VolumeName = 'Empty'; Size = 0; FreeSpace = 0 },
@@ -67,7 +67,7 @@ Describe 'Get-PtDiskReport' {
     }
 
     Context 'a computer that cannot be reached' {
-        Mock Get-WmiObject -ModuleName PowerShellToolbox { throw 'RPC server is unavailable' }
+        Mock Get-CimInstance -ModuleName PowerShellToolbox { throw 'RPC server is unavailable' }
 
         It 'warns and returns nothing instead of failing' {
             $result = Get-PtDiskReport -ComputerName 'DOWN01' -WarningAction SilentlyContinue
@@ -76,14 +76,14 @@ Describe 'Get-PtDiskReport' {
     }
 
     Context 'several computers from the pipeline' {
-        Mock Get-WmiObject -ModuleName PowerShellToolbox {
+        Mock Get-CimInstance -ModuleName PowerShellToolbox {
             [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 50GB }
         }
 
         It 'queries each one' {
             $result = @('A', 'B', 'C' | Get-PtDiskReport)
             $result.Count | Should -Be 3
-            Assert-MockCalled Get-WmiObject -ModuleName PowerShellToolbox -Times 3 -Exactly
+            Assert-MockCalled Get-CimInstance -ModuleName PowerShellToolbox -Times 3 -Exactly
         }
     }
 }
