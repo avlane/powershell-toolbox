@@ -1,4 +1,5 @@
-# Pester 4 tests. Run from the repository root with: Invoke-Pester .\tests
+# Pester 4 tests. Mocks only reach the current runspace, so these use -ThrottleLimit 1 (the
+# serial path); the parallel path needs a real computer. Run from the repository root with: Invoke-Pester .\tests
 $moduleRoot = Split-Path -Parent $PSScriptRoot
 $manifest = Join-Path (Join-Path $moduleRoot 'PowerShellToolbox') 'PowerShellToolbox.psd1'
 Import-Module $manifest -Force
@@ -14,7 +15,7 @@ Describe 'Get-PtDiskReport' {
         }
 
         BeforeAll {
-            $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01' -WarningPercent 15)
+            $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01' -WarningPercent 15 -ThrottleLimit 1)
         }
 
         It 'returns one row per disk' {
@@ -47,7 +48,7 @@ Describe 'Get-PtDiskReport' {
         }
 
         BeforeAll {
-            $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01')
+            $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01' -ThrottleLimit 1)
         }
 
         It 'still reports every disk' {
@@ -70,7 +71,7 @@ Describe 'Get-PtDiskReport' {
         Mock Get-CimInstance -ModuleName PowerShellToolbox { throw 'RPC server is unavailable' }
 
         It 'warns and returns nothing instead of failing' {
-            $result = Get-PtDiskReport -ComputerName 'DOWN01' -WarningAction SilentlyContinue
+            $result = Get-PtDiskReport -ComputerName 'DOWN01' -ThrottleLimit 1 -WarningAction SilentlyContinue
             $result | Should -BeNullOrEmpty
         }
     }
@@ -81,7 +82,7 @@ Describe 'Get-PtDiskReport' {
         }
 
         It 'queries each one' {
-            $result = @('A', 'B', 'C' | Get-PtDiskReport)
+            $result = @('A', 'B', 'C' | Get-PtDiskReport -ThrottleLimit 1)
             $result.Count | Should -Be 3
             Assert-MockCalled Get-CimInstance -ModuleName PowerShellToolbox -Times 3 -Exactly
         }
