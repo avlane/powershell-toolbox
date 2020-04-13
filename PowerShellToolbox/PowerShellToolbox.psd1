@@ -15,6 +15,7 @@
         'Get-PtDiskReport',
         'Get-PtEventLogSummary',
         'Get-PtRestoreStatus',
+        'Get-PtScheduledTaskReport',
         'Get-PtServiceTriage',
         'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
