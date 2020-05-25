@@ -19,6 +19,7 @@
         'Get-PtServiceTriage',
         'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
+        'Register-PtMaintenanceTask',
         'Remove-PtOldFile'
     )
     CmdletsToExport   = @()
