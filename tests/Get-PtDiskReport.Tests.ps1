@@ -1,20 +1,25 @@
-# Pester 4 tests. Mocks only reach the current runspace, so these use -ThrottleLimit 1 (the
-# serial path); the parallel path needs a real computer. Run from the repository root with: Invoke-Pester .\tests
-$moduleRoot = Split-Path -Parent $PSScriptRoot
-$manifest = Join-Path (Join-Path $moduleRoot 'PowerShellToolbox') 'PowerShellToolbox.psd1'
-Import-Module $manifest -Force
+#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0.0' }
+
+# Pester 5 tests. Run from the repository root with: Invoke-Pester .\tests
+#
+# Mocks only reach the current runspace, so the tests pass -ThrottleLimit 1, which
+# selects the serial code path. The -Parallel path needs real computers.
+
+BeforeAll {
+    $manifest = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'PowerShellToolbox') 'PowerShellToolbox.psd1'
+    Import-Module $manifest -Force
+}
 
 Describe 'Get-PtDiskReport' {
 
     Context 'a server with two fixed disks' {
-        Mock Get-CimInstance -ModuleName PowerShellToolbox {
-            @(
-                [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 50GB },
-                [pscustomobject]@{ DeviceID = 'D:'; VolumeName = 'Data'; Size = 200GB; FreeSpace = 10GB }
-            )
-        }
-
         BeforeAll {
+            Mock Get-CimInstance -ModuleName PowerShellToolbox {
+                @(
+                    [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 50GB },
+                    [pscustomobject]@{ DeviceID = 'D:'; VolumeName = 'Data'; Size = 200GB; FreeSpace = 10GB }
+                )
+            }
             $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01' -WarningPercent 15 -ThrottleLimit 1)
         }
 
@@ -39,15 +44,14 @@ Describe 'Get-PtDiskReport' {
     }
 
     Context 'a volume whose size cannot be read' {
-        Mock Get-CimInstance -ModuleName PowerShellToolbox {
-            @(
-                [pscustomobject]@{ DeviceID = 'E:'; VolumeName = 'Locked'; Size = $null; FreeSpace = $null },
-                [pscustomobject]@{ DeviceID = 'F:'; VolumeName = 'Empty'; Size = 0; FreeSpace = 0 },
-                [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 5GB }
-            )
-        }
-
         BeforeAll {
+            Mock Get-CimInstance -ModuleName PowerShellToolbox {
+                @(
+                    [pscustomobject]@{ DeviceID = 'E:'; VolumeName = 'Locked'; Size = $null; FreeSpace = $null },
+                    [pscustomobject]@{ DeviceID = 'F:'; VolumeName = 'Empty'; Size = 0; FreeSpace = 0 },
+                    [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 5GB }
+                )
+            }
             $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01' -ThrottleLimit 1)
         }
 
@@ -68,7 +72,9 @@ Describe 'Get-PtDiskReport' {
     }
 
     Context 'a computer that cannot be reached' {
-        Mock Get-CimInstance -ModuleName PowerShellToolbox { throw 'RPC server is unavailable' }
+        BeforeAll {
+            Mock Get-CimInstance -ModuleName PowerShellToolbox { throw 'WinRM cannot process the request' }
+        }
 
         It 'warns and returns nothing instead of failing' {
             $result = Get-PtDiskReport -ComputerName 'DOWN01' -ThrottleLimit 1 -WarningAction SilentlyContinue
@@ -77,14 +83,16 @@ Describe 'Get-PtDiskReport' {
     }
 
     Context 'several computers from the pipeline' {
-        Mock Get-CimInstance -ModuleName PowerShellToolbox {
-            [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 50GB }
+        BeforeAll {
+            Mock Get-CimInstance -ModuleName PowerShellToolbox {
+                [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 50GB }
+            }
         }
 
         It 'queries each one' {
             $result = @('A', 'B', 'C' | Get-PtDiskReport -ThrottleLimit 1)
             $result.Count | Should -Be 3
-            Assert-MockCalled Get-CimInstance -ModuleName PowerShellToolbox -Times 3 -Exactly
+            Should -Invoke Get-CimInstance -ModuleName PowerShellToolbox -Times 3 -Exactly
         }
     }
 }

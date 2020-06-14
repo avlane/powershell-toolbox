@@ -1,14 +1,18 @@
-# Pester 4 tests. Writes into TestDrive only.
-$moduleRoot = Split-Path -Parent $PSScriptRoot
-$manifest = Join-Path (Join-Path $moduleRoot 'PowerShellToolbox') 'PowerShellToolbox.psd1'
-Import-Module $manifest -Force
+#Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0.0' }
 
-Describe 'Export-PtReport' {
+# Pester 5 tests. Writes into TestDrive only.
+
+BeforeAll {
+    $manifest = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'PowerShellToolbox') 'PowerShellToolbox.psd1'
+    Import-Module $manifest -Force
+
     $rows = @(
         [pscustomobject]@{ Name = 'SQLPROD01'; FreeGB = 12.5; Note = 'ok' },
         [pscustomobject]@{ Name = 'SQLPROD02'; FreeGB = 3; Note = '<script>alert(1)</script> & more' }
     )
+}
 
+Describe 'Export-PtReport' {
     It 'infers CSV from the extension' {
         $file = $rows | Export-PtReport -Path (Join-Path $TestDrive 'r.csv')
         $file.Name | Should -Be 'r.csv'
@@ -34,13 +38,13 @@ Describe 'Export-PtReport' {
     }
 
     It 'creates the folder' {
-        $path = Join-Path $TestDrive 'a\b\c.json'
+        $path = Join-Path (Join-Path (Join-Path $TestDrive 'a') 'b') 'c.json'
         $rows | Export-PtReport -Path $path | Out-Null
         Test-Path $path | Should -Be $true
     }
 
     It 'needs -Format when the extension is unknown' {
-        { $rows | Export-PtReport -Path (Join-Path $TestDrive 'r.dat') } | Should -Throw 'Cannot tell the format'
+        { $rows | Export-PtReport -Path (Join-Path $TestDrive 'r.dat') } | Should -Throw '*Cannot tell the format*'
         $rows | Export-PtReport -Path (Join-Path $TestDrive 'r.dat') -Format Csv | Out-Null
         Test-Path (Join-Path $TestDrive 'r.dat') | Should -Be $true
     }

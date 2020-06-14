@@ -11,7 +11,7 @@ retries, an Azure inventory and a safe old-file cleaner.
   queries need WinRM on the target computers.
 - For the SQL commands: the `SqlServer` module (`Install-Module SqlServer`).
 - For `Get-PtAzureInventory`: the `Az` module and a signed-in session (`Connect-AzAccount`).
-- For the tests: Pester 4 (`Install-Module Pester -RequiredVersion 4.10.1`).
+- For the tests: Pester 5 (`Install-Module Pester -MinimumVersion 5.0.0 -SkipPublisherCheck`).
 
 ## Using it
 
@@ -46,6 +46,6 @@ Invoke-Pester .\tests
 
 The tests mock the commands that talk to other machines (`Get-CimInstance`,
 `Invoke-Sqlcmd`) and use `TestDrive` for file operations. They are written for
-Pester 4.
+Pester 5.
 
 Lint settings for PSScriptAnalyzer are in `PSScriptAnalyzerSettings.psd1`.
