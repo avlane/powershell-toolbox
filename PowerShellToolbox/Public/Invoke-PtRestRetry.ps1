@@ -34,6 +34,11 @@ function Invoke-PtRestRetry {
     .PARAMETER TimeoutSec
     Timeout of each attempt. Default 60.
 
+    .PARAMETER Raw
+    Return the web response (status, headers, content) from Invoke-WebRequest
+    instead of the parsed body from Invoke-RestMethod. Needed to read headers such
+    as Link.
+
     .EXAMPLE
     Invoke-PtRestRetry -Uri 'https://api.example.com/v1/items' -Headers @{ Authorization = 'Bearer abc' } -MaxRetries 5
     #>
@@ -56,7 +61,9 @@ function Invoke-PtRestRetry {
         [int]$InitialDelaySeconds = 2,
 
         [ValidateRange(1, 3600)]
-        [int]$TimeoutSec = 60
+        [int]$TimeoutSec = 60,
+
+        [switch]$Raw
     )
 
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -73,12 +80,18 @@ function Invoke-PtRestRetry {
         }
     }
 
+    $command = 'Invoke-RestMethod'
+    if ($Raw) {
+        $command = 'Invoke-WebRequest'
+        $parameters['UseBasicParsing'] = $true    # Windows PowerShell 5.1 would otherwise need Internet Explorer's engine
+    }
+
     $retryableStatus = @(429, 500, 502, 503, 504)
     $attempt = 0
     while ($true) {
         $attempt++
         try {
-            return Invoke-RestMethod @parameters
+            return & $command @parameters
         }
         catch {
             $detail = Get-PtHttpErrorDetail -ErrorRecord $_

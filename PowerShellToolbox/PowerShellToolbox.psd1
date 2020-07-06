@@ -17,6 +17,7 @@
         'Get-PtRestoreStatus',
         'Get-PtScheduledTaskReport',
         'Get-PtServiceTriage',
+        'Invoke-PtRestPaged',
         'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
         'Register-PtMaintenanceTask',
