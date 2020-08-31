@@ -23,7 +23,8 @@
         'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
         'Register-PtMaintenanceTask',
-        'Remove-PtOldFile'
+        'Remove-PtOldFile',
+        'Search-PtJiraIssue'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()
