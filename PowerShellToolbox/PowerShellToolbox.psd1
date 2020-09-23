@@ -7,6 +7,7 @@
     Description       = 'Small admin helpers: disk, service and event log reports, SQL Server status queries.'
     PowerShellVersion = '5.1'
     FunctionsToExport = @(
+        'Add-PtJiraComment',
         'Connect-PtJira',
         'Export-PtReport',
         'Get-PtAgentJobReport',
@@ -15,10 +16,13 @@
         'Get-PtCertificateExpiry',
         'Get-PtDiskReport',
         'Get-PtEventLogSummary',
+        'Get-PtJiraIssue',
+        'Get-PtJiraTransition',
         'Get-PtRestoreStatus',
         'Get-PtScheduledTaskReport',
         'Get-PtServiceTriage',
         'Invoke-PtJiraRequest',
+        'Invoke-PtJiraTransition',
         'Invoke-PtRestPaged',
         'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
