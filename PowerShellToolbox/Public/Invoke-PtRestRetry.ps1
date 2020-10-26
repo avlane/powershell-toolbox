@@ -13,6 +13,10 @@ function Invoke-PtRestRetry {
     TLS 1.2 is switched on for the session, which Windows PowerShell 5.1 does not
     always do by default.
 
+    On PowerShell 7 the HTTP status and headers are read from the response
+    (-SkipHttpErrorCheck) instead of from an exception; on Windows PowerShell 5.1
+    they come from the WebException.
+
     .PARAMETER Uri
     The address to call.
 
@@ -68,6 +72,10 @@ function Invoke-PtRestRetry {
 
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
+    # PowerShell 7 can hand back HTTP error responses instead of throwing, which
+    # keeps the status code, headers and body of a 429 or 503 within easy reach
+    $isCore = $PSVersionTable.PSVersion.Major -ge 7
+
     $parameters = @{ Uri = $Uri; Method = $Method; TimeoutSec = $TimeoutSec; ErrorAction = 'Stop' }
     if ($Headers) { $parameters['Headers'] = $Headers }
     if ($null -ne $Body) {
@@ -85,24 +93,60 @@ function Invoke-PtRestRetry {
         $command = 'Invoke-WebRequest'
         $parameters['UseBasicParsing'] = $true    # Windows PowerShell 5.1 would otherwise need Internet Explorer's engine
     }
+    if ($isCore) {
+        $parameters['SkipHttpErrorCheck'] = $true
+        if (-not $Raw) {
+            $parameters['StatusCodeVariable'] = 'statusCode'
+            $parameters['ResponseHeadersVariable'] = 'responseHeaders'
+        }
+    }
 
     $retryableStatus = @(429, 500, 502, 503, 504)
     $attempt = 0
     while ($true) {
         $attempt++
+        $detail = $null
+        $caught = $null
+        $statusCode = $null
+        $responseHeaders = $null
+        $result = $null
+
         try {
-            return & $command @parameters
+            $result = & $command @parameters
+
+            if ($isCore) {
+                if ($Raw) {
+                    $statusCode = [int]$result.StatusCode
+                    $responseHeaders = $result.Headers
+                }
+                if ($statusCode -ge 400) {
+                    $retryAfter = $null
+                    if ($responseHeaders -and $responseHeaders['Retry-After']) {
+                        $retryAfter = [string](@($responseHeaders['Retry-After'])[0])
+                    }
+                    $detail = [pscustomobject]@{ StatusCode = $statusCode; RetryAfter = $retryAfter; IsNetworkError = $false; Message = "HTTP $statusCode" }
+                }
+            }
         }
         catch {
+            $caught = $_
             $detail = Get-PtHttpErrorDetail -ErrorRecord $_
-            $retryable = $detail.IsNetworkError -or ($retryableStatus -contains $detail.StatusCode)
-            if (-not $retryable -or $attempt -gt $MaxRetries) { throw }
-
-            $delay = [math]::Min(60, $InitialDelaySeconds * [math]::Pow(2, $attempt - 1))
-            if ($detail.RetryAfter -match '^\d+$') { $delay = [int]$detail.RetryAfter }
-
-            Write-Verbose "Attempt $attempt of $($MaxRetries + 1) failed ($($detail.Message)); waiting $delay seconds."
-            Start-Sleep -Seconds $delay
         }
+
+        if (-not $detail) { return $result }
+
+        $retryable = $detail.IsNetworkError -or ($retryableStatus -contains $detail.StatusCode)
+        if (-not $retryable -or $attempt -gt $MaxRetries) {
+            if ($caught) { throw $caught }
+            $text = if ($result -is [string]) { $result } elseif ($Raw) { [string]$result.Content } else { ConvertTo-Json -InputObject $result -Depth 3 -Compress }
+            if ($text.Length -gt 500) { $text = $text.Substring(0, 500) }
+            throw "$($detail.Message) from $Uri : $text"
+        }
+
+        $delay = [math]::Min(60, $InitialDelaySeconds * [math]::Pow(2, $attempt - 1))
+        if ($detail.RetryAfter -match '^\d+$') { $delay = [int]$detail.RetryAfter }
+
+        Write-Verbose "Attempt $attempt of $($MaxRetries + 1) failed ($($detail.Message)); waiting $delay seconds."
+        Start-Sleep -Seconds $delay
     }
 }

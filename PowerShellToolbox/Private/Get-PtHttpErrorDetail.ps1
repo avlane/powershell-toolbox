@@ -5,7 +5,8 @@ function Get-PtHttpErrorDetail {
 
     .DESCRIPTION
     In Windows PowerShell 5.1 Invoke-RestMethod throws a WebException whose
-    Response holds the HTTP details. This returns them as a plain object so the
+    Response holds the HTTP details (PowerShell 7 throws an HttpRequestException
+    without a response only when the connection itself fails). This returns them as a plain object so the
     retry logic (and its tests) do not have to dig through exception types.
     #>
     [CmdletBinding()]
@@ -28,7 +29,7 @@ function Get-PtHttpErrorDetail {
     [pscustomobject]@{
         StatusCode     = $statusCode
         RetryAfter     = $retryAfter
-        IsNetworkError = (($null -eq $response) -and ($exception -is [System.Net.WebException]))
+        IsNetworkError = (($null -eq $response) -and ($exception -is [System.Net.WebException] -or $exception.GetType().FullName -eq 'System.Net.Http.HttpRequestException'))
         Message        = $exception.Message
     }
 }

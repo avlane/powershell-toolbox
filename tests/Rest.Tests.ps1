@@ -3,6 +3,10 @@
 # Pester 5 tests for the REST helpers. No network: Invoke-RestMethod,
 # Invoke-WebRequest and Start-Sleep are mocked.
 
+BeforeDiscovery {
+    $isCore = $PSVersionTable.PSVersion.Major -ge 7
+}
+
 BeforeAll {
     $manifest = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'PowerShellToolbox') 'PowerShellToolbox.psd1'
     Import-Module $manifest -Force
@@ -89,6 +93,47 @@ Describe 'Invoke-PtRestRetry' {
         Should -Invoke Invoke-RestMethod -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
             $ContentType -eq 'application/json' -and $Body -match '"name":\s*"a"'
         }
+    }
+}
+
+Describe 'Invoke-PtRestRetry on PowerShell 7' -Skip:(-not $isCore) {
+    BeforeEach {
+        $global:PtTestCalls = 0
+        Mock Start-Sleep -ModuleName PowerShellToolbox { }
+    }
+
+    AfterAll {
+        Remove-Variable -Name PtTestCalls -Scope Global -ErrorAction SilentlyContinue
+    }
+
+    It 'retries an error response that did not throw, honouring Retry-After' {
+        Mock Invoke-WebRequest -ModuleName PowerShellToolbox {
+            $global:PtTestCalls++
+            if ($global:PtTestCalls -lt 2) {
+                [pscustomobject]@{ StatusCode = 503; Headers = @{ 'Retry-After' = @('3') }; Content = 'busy' }
+            }
+            else {
+                [pscustomobject]@{ StatusCode = 200; Headers = @{}; Content = '{}' }
+            }
+        }
+        $response = Invoke-PtRestRetry -Uri 'https://api.example.com/x' -Raw
+        $response.StatusCode | Should -Be 200
+        Should -Invoke Invoke-WebRequest -ModuleName PowerShellToolbox -Times 2 -Exactly
+        Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -eq 3 }
+    }
+
+    It 'throws the status and body of an error that is not worth retrying' {
+        Mock Invoke-WebRequest -ModuleName PowerShellToolbox {
+            [pscustomobject]@{ StatusCode = 404; Headers = @{}; Content = 'no such thing' }
+        }
+        { Invoke-PtRestRetry -Uri 'https://api.example.com/x' -Raw } | Should -Throw '*HTTP 404*no such thing*'
+        Should -Invoke Invoke-WebRequest -ModuleName PowerShellToolbox -Times 1 -Exactly
+    }
+
+    It 'asks PowerShell not to throw on HTTP errors' {
+        Mock Invoke-WebRequest -ModuleName PowerShellToolbox { [pscustomobject]@{ StatusCode = 200; Headers = @{}; Content = '' } }
+        Invoke-PtRestRetry -Uri 'https://api.example.com/x' -Raw | Out-Null
+        Should -Invoke Invoke-WebRequest -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $SkipHttpErrorCheck -eq $true }
     }
 }
 
