@@ -14,6 +14,7 @@
         'Get-PtAzureInventory',
         'Get-PtBackupStatus',
         'Get-PtCertificateExpiry',
+        'Get-PtDatabaseSpace',
         'Get-PtDiskReport',
         'Get-PtEventLogSummary',
         'Get-PtJiraIssue',
