@@ -13,6 +13,7 @@
         'Get-PtAgentJobReport',
         'Get-PtAzureInventory',
         'Get-PtBackupStatus',
+        'Get-PtBlockingSession',
         'Get-PtCertificateExpiry',
         'Get-PtDatabaseSpace',
         'Get-PtDiskReport',
