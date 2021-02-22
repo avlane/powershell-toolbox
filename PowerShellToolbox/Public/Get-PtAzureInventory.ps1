@@ -15,6 +15,17 @@ function Get-PtAzureInventory {
     .PARAMETER ResourceGroupName
     Only this resource group in each subscription.
 
+    .PARAMETER RequiredTag
+    Tag names every resource should have (for example Owner, CostCenter). The
+    output gets a MissingTags column listing the ones a resource lacks. Tag names
+    are not case-sensitive in Azure, and neither is this check.
+
+    .PARAMETER OnlyMissingTags
+    With -RequiredTag, return only the resources that lack at least one of them.
+
+    .EXAMPLE
+    Get-PtAzureInventory -RequiredTag Owner, CostCenter -OnlyMissingTags | Export-Csv -Path .\untagged.csv -NoTypeInformation
+
     .EXAMPLE
     Get-PtAzureInventory | Export-Csv -Path .\inventory.csv -NoTypeInformation
     #>
@@ -22,7 +33,11 @@ function Get-PtAzureInventory {
     param(
         [string[]]$SubscriptionId,
 
-        [string]$ResourceGroupName
+        [string]$ResourceGroupName,
+
+        [string[]]$RequiredTag,
+
+        [switch]$OnlyMissingTags
     )
 
     if (-not (Get-Command -Name Get-AzContext -ErrorAction SilentlyContinue)) {
@@ -52,6 +67,14 @@ function Get-PtAzureInventory {
                 $tags = $pairs -join '; '
             }
 
+            $present = @()
+            if ($resource.Tags) { $present = @($resource.Tags.Keys) }
+            $missing = @()
+            foreach ($required in @($RequiredTag)) {
+                if ($required -and -not ($present -contains $required)) { $missing += $required }
+            }
+            if ($OnlyMissingTags -and $missing.Count -eq 0) { continue }
+
             [pscustomobject]@{
                 Subscription  = $subscription.Name
                 ResourceGroup = $resource.ResourceGroupName
@@ -59,6 +82,7 @@ function Get-PtAzureInventory {
                 Type          = $resource.ResourceType
                 Location      = $resource.Location
                 Tags          = $tags
+                MissingTags   = ($missing -join ', ')
             }
         }
     }
