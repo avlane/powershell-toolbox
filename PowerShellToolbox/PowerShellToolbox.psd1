@@ -9,6 +9,7 @@
     FunctionsToExport = @(
         'Add-PtJiraComment',
         'Connect-PtJira',
+        'Copy-PtFileSafe',
         'Export-PtReport',
         'Get-PtAgentJobReport',
         'Get-PtAzureInventory',
