@@ -8,6 +8,7 @@
     PowerShellVersion = '5.1'
     FunctionsToExport = @(
         'Add-PtJiraComment',
+        'Compress-PtOldFile',
         'Connect-PtJira',
         'Copy-PtFileSafe',
         'Export-PtReport',
