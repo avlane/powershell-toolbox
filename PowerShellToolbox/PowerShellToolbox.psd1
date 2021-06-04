@@ -24,7 +24,9 @@
         'Get-PtJiraTransition',
         'Get-PtRestoreStatus',
         'Get-PtScheduledTaskReport',
+        'Get-PtSecret',
         'Get-PtServiceTriage',
+        'Initialize-PtVault',
         'Invoke-PtJiraRequest',
         'Invoke-PtJiraTransition',
         'Invoke-PtRestPaged',
@@ -32,7 +34,8 @@
         'Invoke-PtSqlQuery',
         'Register-PtMaintenanceTask',
         'Remove-PtOldFile',
-        'Search-PtJiraIssue'
+        'Search-PtJiraIssue',
+        'Set-PtSecret'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()
