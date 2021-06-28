@@ -7,8 +7,9 @@ function Connect-PtJira {
     Jira Cloud accepts basic authentication with the account's e-mail address as the
     user name and an API token as the password (create one at
     https://id.atlassian.com/manage-profile/security/api-tokens). Pass them as a
-    credential, or use -FromEnvironment to read JIRA_EMAIL and JIRA_API_TOKEN, which
-    keeps the token out of scripts and shell history.
+    credential, use -FromEnvironment to read JIRA_EMAIL and JIRA_API_TOKEN, or use
+    -SecretName to read a stored PSCredential from the vault (see Set-PtSecret).
+    The last two keep the token out of scripts and shell history.
 
     The connection is kept in memory for the current session only. The command
     checks it by calling /rest/api/3/myself, and returns the signed-in user (the
@@ -23,11 +24,19 @@ function Connect-PtJira {
     .PARAMETER FromEnvironment
     Read JIRA_EMAIL and JIRA_API_TOKEN from the environment.
 
+    .PARAMETER SecretName
+    The name of a PSCredential secret (e-mail address and API token) in the
+    PowerShellToolbox vault.
+
     .PARAMETER SkipValidation
     Do not call Jira to check the credentials.
 
     .EXAMPLE
     Connect-PtJira -BaseUri https://example.atlassian.net -FromEnvironment
+
+    .EXAMPLE
+    Set-PtSecret -Name jira-api-token -Credential (Get-Credential -Message 'E-mail and API token')
+    Connect-PtJira -BaseUri https://example.atlassian.net -SecretName jira-api-token
 
     .EXAMPLE
     $token = Read-Host -AsSecureString 'API token'
@@ -45,6 +54,9 @@ function Connect-PtJira {
         [Parameter(Mandatory = $true, ParameterSetName = 'Environment')]
         [switch]$FromEnvironment,
 
+        [Parameter(Mandatory = $true, ParameterSetName = 'Secret')]
+        [string]$SecretName,
+
         [switch]$SkipValidation
     )
 
@@ -56,6 +68,12 @@ function Connect-PtJira {
         $token = $env:JIRA_API_TOKEN
     }
     else {
+        if ($PSCmdlet.ParameterSetName -eq 'Secret') {
+            $Credential = Get-PtSecret -Name $SecretName
+            if ($Credential -isnot [pscredential]) {
+                throw "The secret $SecretName is not a credential. Store the e-mail address and the API token with Set-PtSecret -Credential."
+            }
+        }
         $email = $Credential.UserName
         $token = $Credential.GetNetworkCredential().Password
     }
