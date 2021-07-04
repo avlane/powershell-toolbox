@@ -68,14 +68,16 @@ function Connect-PtJira {
         $token = $env:JIRA_API_TOKEN
     }
     else {
+        $account = $Credential
         if ($PSCmdlet.ParameterSetName -eq 'Secret') {
-            $Credential = Get-PtSecret -Name $SecretName
-            if ($Credential -isnot [pscredential]) {
+            # a separate variable: $Credential is typed, and a string secret would fail to convert
+            $account = Get-PtSecret -Name $SecretName
+            if ($account -isnot [pscredential]) {
                 throw "The secret $SecretName is not a credential. Store the e-mail address and the API token with Set-PtSecret -Credential."
             }
         }
-        $email = $Credential.UserName
-        $token = $Credential.GetNetworkCredential().Password
+        $email = $account.UserName
+        $token = $account.GetNetworkCredential().Password
     }
 
     # ${email} because "$email:" would be read as a variable in a scope called email
