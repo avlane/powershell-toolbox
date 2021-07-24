@@ -56,6 +56,12 @@ function Get-PtEventLogSummary {
                 $events = Get-WinEvent -ComputerName $computer -FilterHashtable $filter -ErrorAction Stop
             }
             catch {
+                # Get-WinEvent reports "no matching events" as an error, but for a
+                # health check that is the good news, not a failure
+                if ($_.FullyQualifiedErrorId -like 'NoMatchingEventsFound*') {
+                    Write-Verbose "No matching events in the $LogName log on $computer."
+                    continue
+                }
                 Write-Warning "Could not read the $LogName log on $computer : $($_.Exception.Message)"
                 continue
             }
