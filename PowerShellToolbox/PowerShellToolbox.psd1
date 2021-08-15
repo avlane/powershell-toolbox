@@ -34,6 +34,7 @@
         'Invoke-PtSqlQuery',
         'Register-PtMaintenanceTask',
         'Remove-PtOldFile',
+        'Restart-PtFailedService',
         'Search-PtJiraIssue',
         'Set-PtSecret'
     )
