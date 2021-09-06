@@ -37,6 +37,23 @@ Describe 'Export-PtReport' {
         $text | Should -Match '<th>FreeGB</th>'
     }
 
+    It 'colours rows by Status or Verdict' {
+        $data = @(
+            [pscustomobject]@{ Name = 'a'; Status = 'OK' },
+            [pscustomobject]@{ Name = 'b'; Status = 'Low' },
+            [pscustomobject]@{ Name = 'c'; Status = 'Failed' },
+            [pscustomobject]@{ Name = 'd'; Verdict = 'Flaky' },
+            [pscustomobject]@{ Name = 'e'; Other = 'x' }
+        )
+        $file = $data | Export-PtReport -Path (Join-Path $TestDrive 'colours.html')
+        $text = Get-Content -LiteralPath $file.FullName -Raw
+        $text | Should -Match '<tr class="good"><td>a</td>'
+        $text | Should -Match '<tr class="warn"><td>b</td>'
+        $text | Should -Match '<tr class="bad"><td>c</td>'
+        $text | Should -Match '<tr class="warn"><td>d</td>'
+        $text | Should -Match '<tr><td>e</td>'
+    }
+
     It 'creates the folder' {
         $path = Join-Path (Join-Path (Join-Path $TestDrive 'a') 'b') 'c.json'
         $rows | Export-PtReport -Path $path | Out-Null

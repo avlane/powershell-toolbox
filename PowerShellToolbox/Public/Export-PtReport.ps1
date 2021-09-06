@@ -7,7 +7,10 @@ function Export-PtReport {
     A small report writer for the other commands in this module. The format follows
     the file extension (.csv, .json, .html or .htm) unless -Format is given. The
     HTML output is one styled table in which every value is HTML-encoded, so text
-    that comes from a server cannot inject markup. The folder is created when it
+    that comes from a server cannot inject markup. If the objects have a Status or
+    Verdict property (as the reports in this module do), the row is coloured red
+    for Failed, Expired, NoBackup, LowVolume, Critical and Unknown, yellow for Low,
+    Stale, Expiring, Flaky, BadGrowth and NeverRun, and marked green for OK. The folder is created when it
     does not exist, and the file is only written if ShouldProcess agrees (-WhatIf).
 
     Returns the file that was written.
@@ -81,7 +84,7 @@ function Export-PtReport {
                     [void]$html.AppendLine('<!DOCTYPE html>')
                     [void]$html.AppendLine('<html><head><meta charset="utf-8">')
                     [void]$html.AppendLine("<title>$(& $encode $Title)</title>")
-                    [void]$html.AppendLine('<style>body{font-family:Segoe UI,Arial,sans-serif;margin:1.5em}table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 10px;text-align:left}th{background:#eee}</style>')
+                    [void]$html.AppendLine('<style>body{font-family:Segoe UI,Arial,sans-serif;margin:1.5em}table{border-collapse:collapse}th,td{border:1px solid #ccc;padding:4px 10px;text-align:left}th{background:#eee}tr.bad td{background:#fde2e2}tr.warn td{background:#fff3cd}tr.good td:first-child{border-left:4px solid #5cb85c}</style>')
                     [void]$html.AppendLine('</head><body>')
                     [void]$html.AppendLine("<h1>$(& $encode $Title)</h1>")
                     [void]$html.AppendLine("<p>Generated $(Get-Date -Format 'yyyy-MM-dd HH:mm') - $($items.Count) rows</p>")
@@ -89,9 +92,20 @@ function Export-PtReport {
                         $columns = @($items[0].PSObject.Properties.Name)
                         [void]$html.AppendLine('<table>')
                         [void]$html.AppendLine('<tr>' + (($columns | ForEach-Object { "<th>$(& $encode $_)</th>" }) -join '') + '</tr>')
+                        # rows are coloured by a Status or Verdict column if the objects have one
+                        $badWords = @('Failed', 'Expired', 'NoBackup', 'LowVolume', 'Critical', 'Unknown')
+                        $warnWords = @('Low', 'Stale', 'Expiring', 'Flaky', 'BadGrowth', 'NeverRun')
                         foreach ($item in $items) {
+                            $rowClass = ''
+                            foreach ($statusColumn in 'Status', 'Verdict') {
+                                $statusValue = [string]$item.$statusColumn
+                                if ($badWords -contains $statusValue) { $rowClass = ' class="bad"' }
+                                elseif ($warnWords -contains $statusValue) { $rowClass = ' class="warn"' }
+                                elseif ($statusValue -in 'OK', 'Succeeded') { $rowClass = ' class="good"' }
+                                if ($rowClass) { break }
+                            }
                             $cells = foreach ($column in $columns) { "<td>$(& $encode $item.$column)</td>" }
-                            [void]$html.AppendLine('<tr>' + ($cells -join '') + '</tr>')
+                            [void]$html.AppendLine("<tr$rowClass>" + ($cells -join '') + '</tr>')
                         }
                         [void]$html.AppendLine('</table>')
                     }
