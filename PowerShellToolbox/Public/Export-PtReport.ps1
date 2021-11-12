@@ -8,9 +8,8 @@ function Export-PtReport {
     the file extension (.csv, .json, .html or .htm) unless -Format is given. The
     HTML output is one styled table in which every value is HTML-encoded, so text
     that comes from a server cannot inject markup. If the objects have a Status or
-    Verdict property (as the reports in this module do), the row is coloured red
-    for Failed, Expired, NoBackup, LowVolume, Critical and Unknown, yellow for Low,
-    Stale, Expiring, Flaky, BadGrowth and NeverRun, and marked green for OK. The folder is created when it
+    Verdict property (as the reports in this module do), the row is coloured red,
+    yellow or marked green according to the word (see Get-PtStatusSeverity). The folder is created when it
     does not exist, and the file is only written if ShouldProcess agrees (-WhatIf).
 
     Returns the file that was written.
@@ -93,16 +92,11 @@ function Export-PtReport {
                         [void]$html.AppendLine('<table>')
                         [void]$html.AppendLine('<tr>' + (($columns | ForEach-Object { "<th>$(& $encode $_)</th>" }) -join '') + '</tr>')
                         # rows are coloured by a Status or Verdict column if the objects have one
-                        $badWords = @('Failed', 'Expired', 'NoBackup', 'LowVolume', 'Critical', 'Unknown')
-                        $warnWords = @('Low', 'Stale', 'Expiring', 'Flaky', 'BadGrowth', 'NeverRun')
                         foreach ($item in $items) {
                             $rowClass = ''
                             foreach ($statusColumn in 'Status', 'Verdict') {
-                                $statusValue = [string]$item.$statusColumn
-                                if ($badWords -contains $statusValue) { $rowClass = ' class="bad"' }
-                                elseif ($warnWords -contains $statusValue) { $rowClass = ' class="warn"' }
-                                elseif ($statusValue -in 'OK', 'Succeeded') { $rowClass = ' class="good"' }
-                                if ($rowClass) { break }
+                                $severity = Get-PtStatusSeverity -Status ([string]$item.$statusColumn)
+                                if ($severity -ne 'neutral') { $rowClass = " class=`"$severity`""; break }
                             }
                             $cells = foreach ($column in $columns) { "<td>$(& $encode $item.$column)</td>" }
                             [void]$html.AppendLine("<tr$rowClass>" + ($cells -join '') + '</tr>')
