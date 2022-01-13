@@ -24,6 +24,7 @@
         'Get-PtEventLogSummary',
         'Get-PtJiraIssue',
         'Get-PtJiraTransition',
+        'Get-PtLongRunningQuery',
         'Get-PtRestoreStatus',
         'Get-PtScheduledTaskReport',
         'Get-PtSecret',
