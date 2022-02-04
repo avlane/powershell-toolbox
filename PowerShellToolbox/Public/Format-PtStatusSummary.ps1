@@ -5,9 +5,9 @@ function Format-PtStatusSummary {
 
     .DESCRIPTION
     Counts the rows by their Status property (or Verdict, or the property named by
-    -Property) and returns one string. On PowerShell 7.2 and later the counts are
-    coloured with $PSStyle (green, yellow, red) when the output goes to a terminal;
-    Windows PowerShell 5.1 and redirected output get plain text. The string is
+    -Property) and returns one string. The counts are coloured with $PSStyle
+    (green, yellow, red) when the output goes to a terminal; redirected output gets
+    plain text. The string is
     returned rather than written, so it can also go into a log or a mail.
 
     .PARAMETER InputObject
@@ -54,13 +54,10 @@ function Format-PtStatusSummary {
     }
 
     end {
-        # $PSStyle exists from PowerShell 7.2; Get-Variable avoids a failure on older versions
-        $style = (Get-Variable -Name PSStyle -ErrorAction SilentlyContinue).Value
+        $style = $PSStyle
         $useColor = $false
-        if ($style) {
-            if ($Color -eq 'Always') { $useColor = $true }
-            elseif ($Color -eq 'Auto' -and -not [Console]::IsOutputRedirected -and $style.OutputRendering -ne 'PlainText') { $useColor = $true }
-        }
+        if ($Color -eq 'Always') { $useColor = $true }
+        elseif ($Color -eq 'Auto' -and -not [Console]::IsOutputRedirected -and $style.OutputRendering -ne 'PlainText') { $useColor = $true }
 
         $parts = foreach ($key in $counts.Keys) {
             $text = '{0}: {1}' -f $key, $counts[$key]

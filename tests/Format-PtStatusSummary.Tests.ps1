@@ -1,9 +1,5 @@
 #Requires -Modules @{ ModuleName = 'Pester'; ModuleVersion = '5.0.0' }
 
-BeforeDiscovery {
-    $hasPSStyle = [bool](Get-Variable -Name PSStyle -ErrorAction SilentlyContinue)
-}
-
 BeforeAll {
     $manifest = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'PowerShellToolbox') 'PowerShellToolbox.psd1'
     Import-Module $manifest -Force
@@ -39,7 +35,7 @@ Describe 'Format-PtStatusSummary' {
         ($rows | Format-PtStatusSummary -Color Never) | Should -Not -Match ([string][char]27)
     }
 
-    It 'colours with $PSStyle when asked to' -Skip:(-not $hasPSStyle) {
+    It 'colours with $PSStyle when asked to' {
         ($rows | Format-PtStatusSummary -Color Always) | Should -Match ([string][char]27)
     }
 }

@@ -7,9 +7,9 @@ Azure inventory and a safe old-file cleaner.
 
 ## Requirements
 
-- Windows PowerShell 5.1, or PowerShell 7 on Windows (the commands use CIM, the
-  event log, the certificate provider and similar Windows features). Remote CIM
-  queries need WinRM on the target computers.
+- PowerShell 7.2 or later on Windows (the commands use CIM, the event log, the
+  certificate provider and similar Windows features). Remote CIM queries need WinRM
+  on the target computers. Version 0.3.0 was the last to support Windows PowerShell 5.1.
 - For the SQL commands: the `SqlServer` module (`Install-Module SqlServer`).
 - For the Jira commands: a Jira Cloud site and an API token.
 - For `Get-PtAzureInventory`: the `Az` module and a signed-in session (`Connect-AzAccount`).
@@ -80,5 +80,5 @@ PowerShellToolbox/         the module (loader .psm1, manifest .psd1)
   Private/                 internal helpers
 tests/                     Pester 5 tests
 scripts/Invoke-Tests.ps1   CI test runner
-.github/workflows/         tests on Windows PowerShell 5.1 and PowerShell 7, plus PSScriptAnalyzer
+.github/workflows/         tests on PowerShell 7 and PSScriptAnalyzer
 ```

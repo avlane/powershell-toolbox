@@ -40,6 +40,10 @@ function Register-PtMaintenanceTask {
     .PARAMETER TimeLimitHours
     The task is stopped after this many hours. Default 2.
 
+    .PARAMETER PowerShellPath
+    The program that runs the script. Default pwsh.exe (PowerShell 7, which must be
+    installed for the account the task runs as).
+
     .PARAMETER Force
     Replace an existing task of the same name.
 
@@ -73,6 +77,8 @@ function Register-PtMaintenanceTask {
         [ValidateRange(1, 72)]
         [int]$TimeLimitHours = 2,
 
+        [string]$PowerShellPath = 'pwsh.exe',
+
         [switch]$Force
     )
 
@@ -85,7 +91,7 @@ function Register-PtMaintenanceTask {
     $commandLine = "-NoProfile -ExecutionPolicy Bypass -File `"$fullScriptPath`""
     if ($Arguments) { $commandLine = "$commandLine $Arguments" }
 
-    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $commandLine
+    $action = New-ScheduledTaskAction -Execute $PowerShellPath -Argument $commandLine
     if ($Frequency -eq 'Weekly') {
         $trigger = New-ScheduledTaskTrigger -Weekly -DaysOfWeek $DaysOfWeek -At $At
     }

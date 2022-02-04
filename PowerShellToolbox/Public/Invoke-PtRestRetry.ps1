@@ -10,12 +10,9 @@ function Invoke-PtRestRetry {
     exponentially (2, 4, 8 ... seconds, at most 60). Other errors, for example 400,
     401 or 404, are thrown immediately because trying again cannot help.
 
-    TLS 1.2 is switched on for the session, which Windows PowerShell 5.1 does not
-    always do by default.
-
-    On PowerShell 7 the HTTP status and headers are read from the response
-    (-SkipHttpErrorCheck) instead of from an exception; on Windows PowerShell 5.1
-    they come from the WebException.
+    The HTTP status and headers are read from the response (-SkipHttpErrorCheck)
+    rather than from an exception. Connection failures and timeouts still arrive as
+    exceptions and are retried.
 
     .PARAMETER Uri
     The address to call.
@@ -70,13 +67,9 @@ function Invoke-PtRestRetry {
         [switch]$Raw
     )
 
-    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-
-    # PowerShell 7 can hand back HTTP error responses instead of throwing, which
-    # keeps the status code, headers and body of a 429 or 503 within easy reach
-    $isCore = $PSVersionTable.PSVersion.Major -ge 7
-
-    $parameters = @{ Uri = $Uri; Method = $Method; TimeoutSec = $TimeoutSec; ErrorAction = 'Stop' }
+    # HTTP error responses are handed back instead of thrown (-SkipHttpErrorCheck), so
+    # the status code, the Retry-After header and the body of a 429 or 503 are at hand
+    $parameters = @{ Uri = $Uri; Method = $Method; TimeoutSec = $TimeoutSec; ErrorAction = 'Stop'; SkipHttpErrorCheck = $true }
     if ($Headers) { $parameters['Headers'] = $Headers }
     if ($null -ne $Body) {
         if ($Body -is [string]) {
@@ -91,14 +84,10 @@ function Invoke-PtRestRetry {
     $command = 'Invoke-RestMethod'
     if ($Raw) {
         $command = 'Invoke-WebRequest'
-        $parameters['UseBasicParsing'] = $true    # Windows PowerShell 5.1 would otherwise need Internet Explorer's engine
     }
-    if ($isCore) {
-        $parameters['SkipHttpErrorCheck'] = $true
-        if (-not $Raw) {
-            $parameters['StatusCodeVariable'] = 'statusCode'
-            $parameters['ResponseHeadersVariable'] = 'responseHeaders'
-        }
+    else {
+        $parameters['StatusCodeVariable'] = 'statusCode'
+        $parameters['ResponseHeadersVariable'] = 'responseHeaders'
     }
 
     $retryableStatus = @(429, 500, 502, 503, 504)
@@ -114,18 +103,16 @@ function Invoke-PtRestRetry {
         try {
             $result = & $command @parameters
 
-            if ($isCore) {
-                if ($Raw) {
-                    $statusCode = [int]$result.StatusCode
-                    $responseHeaders = $result.Headers
+            if ($Raw) {
+                $statusCode = [int]$result.StatusCode
+                $responseHeaders = $result.Headers
+            }
+            if ($statusCode -ge 400) {
+                $retryAfter = $null
+                if ($responseHeaders -and $responseHeaders['Retry-After']) {
+                    $retryAfter = [string](@($responseHeaders['Retry-After'])[0])
                 }
-                if ($statusCode -ge 400) {
-                    $retryAfter = $null
-                    if ($responseHeaders -and $responseHeaders['Retry-After']) {
-                        $retryAfter = [string](@($responseHeaders['Retry-After'])[0])
-                    }
-                    $detail = [pscustomobject]@{ StatusCode = $statusCode; RetryAfter = $retryAfter; IsNetworkError = $false; Message = "HTTP $statusCode" }
-                }
+                $detail = [pscustomobject]@{ StatusCode = $statusCode; RetryAfter = $retryAfter; IsNetworkError = $false; Message = "HTTP $statusCode" }
             }
         }
         catch {

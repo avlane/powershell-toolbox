@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0 - 2022-02
+
+- **Breaking:** requires PowerShell 7.2 or later; Windows PowerShell 5.1 is no
+  longer supported (0.3.0 is the last release that supports it).
+- `Invoke-PtRestRetry` always reads status and headers from the response; the
+  TLS 1.2 switch and the WebException handling are gone.
+- `Get-PtDiskReport` queries in parallel whenever there is more than one computer.
+- `Compress-PtOldFile` no longer has the 2 GB limit of the old Compress-Archive.
+- `Register-PtMaintenanceTask` runs scripts with `pwsh.exe` by default
+  (`-PowerShellPath`).
+- New: `Get-PtLongRunningQuery`.
+
 ## 0.3.0 - 2021-10
 
 - SQL Server: `Get-PtDatabaseSpace`, `Get-PtBlockingSession`.

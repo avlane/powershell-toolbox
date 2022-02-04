@@ -8,9 +8,8 @@ function Get-PtDiskReport {
     one object per disk with size, free space and a status of OK, Low or Unknown
     (Unknown: the size could not be read).
 
-    On PowerShell 7 and later, with more than one computer, the computers are
-    queried in parallel (see -ThrottleLimit). Windows PowerShell 5.1 queries them one
-    after the other.
+    With more than one computer, the computers are queried in parallel (see
+    -ThrottleLimit).
 
     .PARAMETER ComputerName
     The computers to query. Defaults to the local computer.
@@ -19,7 +18,7 @@ function Get-PtDiskReport {
     A disk with less than this percentage free is reported as Low. Default 10.
 
     .PARAMETER ThrottleLimit
-    How many computers to query at the same time on PowerShell 7. Default 5.
+    How many computers to query at the same time. Default 5.
     1 means one at a time.
 
     .EXAMPLE
@@ -56,7 +55,7 @@ function Get-PtDiskReport {
         # Fetching is the slow part, so only that is done in parallel. The runspaces
         # started by -Parallel do not have this module's functions, which is why the
         # block calls Get-CimInstance directly and the rows are built afterwards.
-        if ($PSVersionTable.PSVersion.Major -ge 7 -and $ThrottleLimit -gt 1 -and $computers.Count -gt 1) {
+        if ($ThrottleLimit -gt 1 -and $computers.Count -gt 1) {
             $fetched = $computers | ForEach-Object -ThrottleLimit $ThrottleLimit -Parallel {
                 $target = $_    # inside catch, $_ is the error record
                 try {

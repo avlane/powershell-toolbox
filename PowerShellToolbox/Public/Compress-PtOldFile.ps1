@@ -10,8 +10,7 @@ function Compress-PtOldFile {
     same length as the original; only then is the original deleted (unless
     -KeepOriginal is given). Files that are already zips are ignored.
 
-    Compress-Archive in Windows PowerShell 5.1 cannot handle files of 2 GB or more;
-    those are reported as TooLarge and left alone. Supports -WhatIf and -Confirm.
+    Supports -WhatIf and -Confirm.
 
     .PARAMETER Path
     One or more folders.
@@ -47,10 +46,6 @@ function Compress-PtOldFile {
         [switch]$KeepOriginal
     )
 
-    begin {
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-    }
-
     process {
         $cutoff = (Get-Date).AddDays(-$OlderThanDays)
 
@@ -69,10 +64,7 @@ function Compress-PtOldFile {
                 $archive = $file.FullName + '.zip'
                 $status = 'Compressed'
 
-                if ($file.Length -ge 2GB -and $PSVersionTable.PSVersion.Major -lt 6) {
-                    $status = 'TooLarge'
-                }
-                elseif (Test-Path -LiteralPath $archive) {
+                if (Test-Path -LiteralPath $archive) {
                     $status = 'ArchiveExists'
                 }
                 elseif ($PSCmdlet.ShouldProcess($file.FullName, 'Compress and remove the original')) {

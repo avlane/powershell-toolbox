@@ -3,10 +3,6 @@
 # Pester 5 tests for the REST helpers. No network: Invoke-RestMethod,
 # Invoke-WebRequest and Start-Sleep are mocked.
 
-BeforeDiscovery {
-    $isCore = $PSVersionTable.PSVersion.Major -ge 7
-}
-
 BeforeAll {
     $manifest = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'PowerShellToolbox') 'PowerShellToolbox.psd1'
     Import-Module $manifest -Force
@@ -96,7 +92,7 @@ Describe 'Invoke-PtRestRetry' {
     }
 }
 
-Describe 'Invoke-PtRestRetry on PowerShell 7' -Skip:(-not $isCore) {
+Describe 'Invoke-PtRestRetry with HTTP error responses' {
     BeforeEach {
         $global:PtTestCalls = 0
         Mock Start-Sleep -ModuleName PowerShellToolbox { }
@@ -134,6 +130,42 @@ Describe 'Invoke-PtRestRetry on PowerShell 7' -Skip:(-not $isCore) {
         Mock Invoke-WebRequest -ModuleName PowerShellToolbox { [pscustomobject]@{ StatusCode = 200; Headers = @{}; Content = '' } }
         Invoke-PtRestRetry -Uri 'https://api.example.com/x' -Raw | Out-Null
         Should -Invoke Invoke-WebRequest -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $SkipHttpErrorCheck -eq $true }
+    }
+}
+
+Describe 'Get-PtHttpErrorDetail' {
+    It 'recognises connection failures as network errors' {
+        $detail = InModuleScope PowerShellToolbox {
+            $exception = New-Object -TypeName System.Net.Http.HttpRequestException -ArgumentList 'Connection refused'
+            $record = New-Object -TypeName System.Management.Automation.ErrorRecord -ArgumentList $exception, 'ConnectFailure', ([System.Management.Automation.ErrorCategory]::ConnectionError), $null
+            Get-PtHttpErrorDetail -ErrorRecord $record
+        }
+        $detail.IsNetworkError | Should -Be $true
+        $detail.StatusCode | Should -BeNullOrEmpty
+        $detail.Message | Should -Be 'Connection refused'
+    }
+
+    It 'does not call other exceptions network errors' {
+        $detail = InModuleScope PowerShellToolbox {
+            $exception = New-Object -TypeName System.ArgumentException -ArgumentList 'bad argument'
+            $record = New-Object -TypeName System.Management.Automation.ErrorRecord -ArgumentList $exception, 'Bad', ([System.Management.Automation.ErrorCategory]::InvalidArgument), $null
+            Get-PtHttpErrorDetail -ErrorRecord $record
+        }
+        $detail.IsNetworkError | Should -Be $false
+    }
+
+    It 'reads the status and Retry-After from an exception that carries a response' {
+        $detail = InModuleScope PowerShellToolbox {
+            $headers = New-Object -TypeName psobject
+            $headers | Add-Member -MemberType ScriptMethod -Name TryGetValues -Value { param($name, [ref]$values) $values.Value = @('9'); $true }
+            $exception = New-Object -TypeName System.Exception -ArgumentList 'Too many requests'
+            $exception | Add-Member -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = 429; Headers = $headers })
+            $record = New-Object -TypeName System.Management.Automation.ErrorRecord -ArgumentList $exception, 'Http429', ([System.Management.Automation.ErrorCategory]::LimitsExceeded), $null
+            Get-PtHttpErrorDetail -ErrorRecord $record
+        }
+        $detail.StatusCode | Should -Be 429
+        $detail.RetryAfter | Should -Be '9'
+        $detail.IsNetworkError | Should -Be $false
     }
 }
 

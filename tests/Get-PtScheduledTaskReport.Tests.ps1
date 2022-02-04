@@ -4,7 +4,7 @@
 # file is skipped elsewhere.
 
 BeforeDiscovery {
-    $onWindows = ($PSVersionTable.PSVersion.Major -lt 6) -or $IsWindows
+    $onWindows = $IsWindows
 }
 
 BeforeAll {
