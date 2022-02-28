@@ -101,7 +101,7 @@ function Compress-PtOldFile {
                     Path       = $file.FullName
                     Archive    = $archive
                     OriginalMB = [math]::Round($file.Length / 1MB, 2)
-                    ArchiveMB  = if ($null -ne $archiveLength) { [math]::Round($archiveLength / 1MB, 2) } else { $null }
+                    ArchiveMB  = $null -ne $archiveLength ? [math]::Round($archiveLength / 1MB, 2) : $null
                     Status     = $status
                 }
             }

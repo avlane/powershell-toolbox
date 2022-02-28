@@ -72,9 +72,7 @@ function Get-PtCertificateExpiry {
 
             foreach ($certificate in ($certificates | Sort-Object -Property NotAfter)) {
                 $daysLeft = [int][math]::Floor(($certificate.NotAfter - (Get-Date)).TotalDays)
-                if ($daysLeft -lt 0) { $status = 'Expired' }
-                elseif ($daysLeft -le $WarningDays) { $status = 'Expiring' }
-                else { $status = 'OK' }
+                $status = $daysLeft -lt 0 ? 'Expired' : ($daysLeft -le $WarningDays ? 'Expiring' : 'OK')
 
                 [pscustomobject]@{
                     ComputerName  = $computer

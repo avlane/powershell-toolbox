@@ -90,7 +90,7 @@ function Get-PtDiskReport {
                 # volume, for example); dividing by that would give wrong numbers
                 if ($disk.Size -gt 0) {
                     $freePercent = [math]::Round(($disk.FreeSpace / $disk.Size) * 100, 1)
-                    if ($freePercent -lt $WarningPercent) { $status = 'Low' } else { $status = 'OK' }
+                    $status = $freePercent -lt $WarningPercent ? 'Low' : 'OK'
                     $sizeGb = [math]::Round($disk.Size / 1GB, 1)
                     $freeGb = [math]::Round($disk.FreeSpace / 1GB, 1)
                 }

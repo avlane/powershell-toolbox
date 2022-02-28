@@ -30,7 +30,7 @@ function ConvertFrom-PtJiraIssue {
             Reporter          = $fields.reporter.displayName
             Created           = ConvertFrom-PtJiraDate -Text $fields.created
             Updated           = ConvertFrom-PtJiraDate -Text $fields.updated
-            Url               = if ($BaseUri) { "$BaseUri/browse/$($Issue.key)" } else { $null }
+            Url               = $BaseUri ? "$BaseUri/browse/$($Issue.key)" : $null
         }
     }
 }

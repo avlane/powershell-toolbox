@@ -89,7 +89,7 @@ ORDER BY r.start_time;
                     CpuSeconds       = [math]::Round($row.CpuMs / 1000, 1)
                     LogicalReads     = $row.LogicalReads
                     WaitType         = $row.WaitType
-                    BlockedBy        = if ($row.BlockingSessionId -gt 0) { $row.BlockingSessionId } else { $null }
+                    BlockedBy        = $row.BlockingSessionId -gt 0 ? $row.BlockingSessionId : $null
                     Text             = $row.StatementText
                 }
             }

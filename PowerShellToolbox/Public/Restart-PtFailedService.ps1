@@ -91,7 +91,7 @@ function Restart-PtFailedService {
             ComputerName = $ComputerName
             Name         = $Name
             Result       = $result
-            State        = if ($service) { [string]$service.State } else { $null }
+            State        = ${service}?.State
             Detail       = $detail
         }
     }

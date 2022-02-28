@@ -86,9 +86,9 @@ function Get-PtScheduledTaskReport {
                     TaskName     = $task.TaskName
                     State        = [string]$task.State
                     Status       = $status
-                    LastRunTime  = if ($info) { $info.LastRunTime } else { $null }
-                    LastResult   = if ($null -ne $result) { '0x{0:X}' -f $result } else { $null }
-                    NextRunTime  = if ($info) { $info.NextRunTime } else { $null }
+                    LastRunTime  = ${info}?.LastRunTime
+                    LastResult   = $null -ne $result ? ('0x{0:X}' -f $result) : $null
+                    NextRunTime  = ${info}?.NextRunTime
                     RunAs        = $task.Principal.UserId
                     Command      = ('{0} {1}' -f $action.Execute, $action.Arguments).Trim()
                 }

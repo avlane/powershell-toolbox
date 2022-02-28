@@ -92,8 +92,7 @@ ORDER BY rh.restore_date DESC;
             if ($RunningOnly) { continue }
 
             foreach ($row in (Invoke-PtSqlQuery @common -Query $historyQuery)) {
-                $type = $restoreTypes["$($row.RestoreType)"]
-                if (-not $type) { $type = "$($row.RestoreType)" }
+                $type = $restoreTypes["$($row.RestoreType)"] ?? "$($row.RestoreType)"
                 [pscustomobject]@{
                     ServerInstance  = $server
                     Kind            = 'History'
