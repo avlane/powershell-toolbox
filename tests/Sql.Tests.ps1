@@ -58,7 +58,7 @@ Describe 'Invoke-PtSqlQuery' {
             Mock Invoke-Sqlcmd -ModuleName PowerShellToolbox {
                 New-TestDataRow ([ordered]@{ Answer = 42 })
             }
-            $result = @(Invoke-PtSqlQuery -ServerInstance 'SQLPROD01', 'SQLPROD02' -Query 'SELECT 42 AS Answer')
+            $result = @(Invoke-PtSqlQuery -ServerInstance 'SQLPROD01', 'SQLPROD02' -Query 'SELECT 42 AS Answer' -ThrottleLimit 1)
         }
 
         It 'runs the query once per server' {
@@ -81,7 +81,7 @@ Describe 'Invoke-PtSqlQuery' {
         }
 
         It 'passes the user name and password on' {
-            Invoke-PtSqlQuery -ServerInstance 'SQLPROD01' -Query 'SELECT 1' -Credential $credential | Out-Null
+            Invoke-PtSqlQuery -ServerInstance 'SQLPROD01' -Query 'SELECT 1' -Credential $credential -ThrottleLimit 1 | Out-Null
             Should -Invoke Invoke-Sqlcmd -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
                 $Username -eq 'monitor' -and $Password -eq 'not-a-real-password'
             }
@@ -97,7 +97,7 @@ Describe 'Invoke-PtSqlQuery' {
         }
 
         It 'reports the error and carries on with the next server' {
-            $result = @(Invoke-PtSqlQuery -ServerInstance 'BAD01', 'GOOD01' -Query 'SELECT 1' -ErrorAction SilentlyContinue -ErrorVariable problems)
+            $result = @(Invoke-PtSqlQuery -ServerInstance 'BAD01', 'GOOD01' -Query 'SELECT 1' -ThrottleLimit 1 -ErrorAction SilentlyContinue -ErrorVariable problems)
             $result.Count | Should -Be 1
             $result[0].ServerInstance | Should -Be 'GOOD01'
             "$problems" | Should -Match 'BAD01'
