@@ -183,6 +183,22 @@ Describe 'Get-PtAgentJobReport' {
         $report.JobName | Should -Not -Contain 'Backup full'
     }
 
+    It 'adds the failed step and its message with -IncludeStepDetail' {
+        Mock Invoke-PtSqlQuery -ModuleName PowerShellToolbox -ParameterFilter { $Query -match 'CROSS APPLY' } {
+            [pscustomobject]@{ JobName = 'Index maintenance'; StepId = 2; StepName = 'Rebuild'; Message = 'Executed as user: CORP\\svc. Could not allocate space. [SQLSTATE 42000]' }
+        }
+        $report = @(Get-PtAgentJobReport -ServerInstance 'SQLPROD01' -IncludeStepDetail)
+        $failed = $report | Where-Object JobName -eq 'Index maintenance'
+        $failed.FailedStep | Should -Be '2 Rebuild'
+        $failed.FailedStepMessage | Should -Match 'Could not allocate space'
+        ($report | Where-Object JobName -eq 'Backup full').FailedStep | Should -BeNullOrEmpty
+    }
+
+    It 'does not ask for step details unless told to' {
+        Get-PtAgentJobReport -ServerInstance 'SQLPROD01' | Out-Null
+        Should -Invoke Invoke-PtSqlQuery -ModuleName PowerShellToolbox -Times 1 -Exactly
+    }
+
     It 'puts the window into the query' {
         Get-PtAgentJobReport -ServerInstance 'SQLPROD01' -Hours 72 | Out-Null
         Should -Invoke Invoke-PtSqlQuery -ModuleName PowerShellToolbox -ParameterFilter { $Query -match 'DATEADD\(HOUR, -72, GETDATE\(\)\)' }

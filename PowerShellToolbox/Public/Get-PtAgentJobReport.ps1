@@ -19,6 +19,11 @@ function Get-PtAgentJobReport {
     .PARAMETER OnlyProblems
     Leave out jobs whose Verdict is OK.
 
+    .PARAMETER IncludeStepDetail
+    For jobs whose last run failed, add the step that failed and its error message
+    (FailedStep, FailedStepMessage). The job-level message only says that a step
+    failed; the step's own message says why.
+
     .PARAMETER Credential
     A SQL Server login. Leave out to use Windows authentication.
 
@@ -34,6 +39,8 @@ function Get-PtAgentJobReport {
         [int]$Hours = 24,
 
         [switch]$OnlyProblems,
+
+        [switch]$IncludeStepDetail,
 
         [pscredential]$Credential
     )
@@ -76,12 +83,33 @@ LEFT JOIN failures AS f ON f.job_id = j.job_id
 LEFT JOIN next_run AS n ON n.job_id = j.job_id
 ORDER BY j.name;
 "@
+
+        # the newest failed step of each job, with the message SQL Server recorded for it
+        $stepQuery = @'
+SELECT j.name AS JobName, s.step_id AS StepId, s.step_name AS StepName, s.message AS Message
+FROM msdb.dbo.sysjobs AS j
+CROSS APPLY (
+    SELECT TOP (1) h.step_id, h.step_name, h.message
+    FROM msdb.dbo.sysjobhistory AS h
+    WHERE h.job_id = j.job_id AND h.step_id > 0 AND h.run_status = 0
+    ORDER BY h.instance_id DESC
+) AS s;
+'@
     }
 
     process {
         foreach ($server in $ServerInstance) {
             $parameters = @{ ServerInstance = $server; Query = $query; Database = 'msdb' }
             if ($Credential) { $parameters['Credential'] = $Credential }
+
+            $stepFailures = @{}
+            if ($IncludeStepDetail) {
+                $stepParameters = $parameters.Clone()
+                $stepParameters['Query'] = $stepQuery
+                foreach ($step in (Invoke-PtSqlQuery @stepParameters)) {
+                    $stepFailures[[string]$step.JobName] = $step
+                }
+            }
 
             foreach ($row in (Invoke-PtSqlQuery @parameters)) {
                 $lastStatus = 'NeverRun'
@@ -94,7 +122,7 @@ ORDER BY j.name;
 
                 if ($OnlyProblems -and $verdict -eq 'OK') { continue }
 
-                [pscustomobject]@{
+                $output = [ordered]@{
                     ServerInstance = $server
                     JobName        = $row.JobName
                     Enabled        = [bool]$row.Enabled
@@ -106,6 +134,12 @@ ORDER BY j.name;
                     Verdict        = $verdict
                     LastMessage    = $row.LastMessage
                 }
+                if ($IncludeStepDetail) {
+                    $failedStep = $lastStatus -eq 'Failed' ? $stepFailures[[string]$row.JobName] : $null
+                    $output['FailedStep'] = $failedStep ? "$($failedStep.StepId) $($failedStep.StepName)" : $null
+                    $output['FailedStepMessage'] = ${failedStep}?.Message
+                }
+                [pscustomobject]$output
             }
         }
     }
