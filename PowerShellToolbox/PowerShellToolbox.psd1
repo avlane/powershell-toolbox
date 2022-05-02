@@ -13,6 +13,7 @@
         'Connect-PtJira',
         'Copy-PtFileSafe',
         'Export-PtReport',
+        'Find-PtJiraUser',
         'Format-PtStatusSummary',
         'Get-PtAgentJobReport',
         'Get-PtAzureInventory',

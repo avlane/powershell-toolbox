@@ -235,3 +235,39 @@ Describe 'Invoke-PtJiraTransition' {
         Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 0 -Exactly
     }
 }
+
+Describe 'Find-PtJiraUser' {
+    BeforeAll {
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox {
+            @(
+                [pscustomobject]@{ accountId = '5b10a2844c20165700ede21g'; displayName = 'Sam Example'; emailAddress = 'sam.example@example.com'; active = $true; accountType = 'atlassian' },
+                [pscustomobject]@{ accountId = '5b10ac8d82e05b22cc7d4ef5'; displayName = 'Sam Examplewood'; emailAddress = $null; active = $true; accountType = 'atlassian' },
+                [pscustomobject]@{ accountId = '557058:f58131cb-b67d-39f1-a8de-2fbd02a1b77f'; displayName = 'Old Sam'; emailAddress = $null; active = $false; accountType = 'atlassian' },
+                [pscustomobject]@{ accountId = '5d1234567890ab0abcd12345'; displayName = 'Sam Bot'; emailAddress = $null; active = $true; accountType = 'app' }
+            )
+        }
+    }
+
+    It 'returns active people with their account ids' {
+        $users = @(Find-PtJiraUser -Query 'sam')
+        $users.DisplayName -join ',' | Should -Be 'Sam Example,Sam Examplewood'
+        $users[0].AccountId | Should -Be '5b10a2844c20165700ede21g'
+    }
+
+    It 'includes inactive accounts and apps on request' {
+        @(Find-PtJiraUser -Query 'sam' -IncludeInactive).Count | Should -Be 4
+    }
+
+    It 'keeps only exact matches with -Exact' {
+        $users = @(Find-PtJiraUser -Query 'sam.example@example.com' -Exact)
+        $users.Count | Should -Be 1
+        $users[0].DisplayName | Should -Be 'Sam Example'
+    }
+
+    It 'passes the query and the limit on' {
+        Find-PtJiraUser -Query 'sam' -First 5 | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter {
+            $Path -eq '/rest/api/3/user/search' -and $Query.query -eq 'sam' -and $Query.maxResults -eq 5
+        }
+    }
+}
