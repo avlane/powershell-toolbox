@@ -271,3 +271,69 @@ Describe 'Find-PtJiraUser' {
         }
     }
 }
+
+Describe 'New-PtJiraIssue' {
+    BeforeEach {
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox { [pscustomobject]@{ id = '10042'; key = 'OPS-42'; self = 'https://example.atlassian.net/rest/api/3/issue/10042' } }
+        InModuleScope PowerShellToolbox { $script:PtJira = @{ BaseUri = 'https://example.atlassian.net'; Headers = @{} } }
+    }
+
+    It 'creates the issue and returns its key and address' {
+        $issue = New-PtJiraIssue -ProjectKey OPS -Summary 'Disk F: is full' -Confirm:$false
+        $issue.Key | Should -Be 'OPS-42'
+        $issue.Url | Should -Be 'https://example.atlassian.net/browse/OPS-42'
+    }
+
+    It 'sends the fields the API expects' {
+        New-PtJiraIssue -ProjectKey OPS -Summary 'Disk F: is full' -Description 'line one' -AssigneeAccountId 'abc123' -Label disk, sql -Priority High -ParentKey OPS-1 -Confirm:$false | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
+            $Method -eq 'Post' -and $Path -eq '/rest/api/3/issue' -and
+            $Body.fields.project.key -eq 'OPS' -and $Body.fields.summary -eq 'Disk F: is full' -and
+            $Body.fields.issuetype.name -eq 'Task' -and $Body.fields.assignee.accountId -eq 'abc123' -and
+            ($Body.fields.labels -join ',') -eq 'disk,sql' -and $Body.fields.priority.name -eq 'High' -and
+            $Body.fields.parent.key -eq 'OPS-1' -and $Body.fields.description.type -eq 'doc'
+        }
+    }
+
+    It 'leaves out the fields that were not given' {
+        New-PtJiraIssue -ProjectKey OPS -Summary 'Minimal' -Confirm:$false | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
+            -not $Body.fields.Contains('assignee') -and -not $Body.fields.Contains('labels') -and -not $Body.fields.Contains('description')
+        }
+    }
+
+    It 'does nothing with -WhatIf' {
+        New-PtJiraIssue -ProjectKey OPS -Summary 'Minimal' -WhatIf | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 0 -Exactly
+    }
+
+    It 'rejects labels with spaces' {
+        { New-PtJiraIssue -ProjectKey OPS -Summary 'x' -Label 'two words' -Confirm:$false } | Should -Throw
+    }
+}
+
+Describe 'Add-PtJiraWorklog' {
+    BeforeEach {
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox { [pscustomobject]@{ id = '777'; timeSpent = '1h 30m'; started = '2022-05-22T09:00:00.000+0200' } }
+    }
+
+    It 'sends the time and the start in the format Jira wants' {
+        $started = [datetimeoffset]::new(2022, 5, 22, 9, 0, 0, [timespan]::FromHours(2))
+        $result = Add-PtJiraWorklog -Key OPS-1 -TimeSpent '1h 30m' -Started $started -Comment 'Extended the volume.' -Confirm:$false
+        $result.WorklogId | Should -Be '777'
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
+            $Path -eq '/rest/api/3/issue/OPS-1/worklog' -and $Body.timeSpent -eq '1h 30m' -and
+            $Body.started -eq '2022-05-22T09:00:00.000+0200' -and $Body.comment.content[0].content[0].text -eq 'Extended the volume.'
+        }
+    }
+
+    It 'rejects a time that is not in Jira notation' {
+        { Add-PtJiraWorklog -Key OPS-1 -TimeSpent '90 minutes' -Confirm:$false } | Should -Throw
+        { Add-PtJiraWorklog -Key OPS-1 -TimeSpent '1.5h' -Confirm:$false } | Should -Throw
+    }
+
+    It 'does nothing with -WhatIf' {
+        Add-PtJiraWorklog -Key OPS-1 -TimeSpent '1h' -WhatIf | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 0 -Exactly
+    }
+}

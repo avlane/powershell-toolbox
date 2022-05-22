@@ -9,6 +9,7 @@
     CompatiblePSEditions = @('Core')
     FunctionsToExport = @(
         'Add-PtJiraComment',
+        'Add-PtJiraWorklog',
         'Compress-PtOldFile',
         'Connect-PtJira',
         'Copy-PtFileSafe',
@@ -36,6 +37,7 @@
         'Invoke-PtRestPaged',
         'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
+        'New-PtJiraIssue',
         'Register-PtMaintenanceTask',
         'Remove-PtOldFile',
         'Restart-PtFailedService',
