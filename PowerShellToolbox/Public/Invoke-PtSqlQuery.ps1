@@ -27,6 +27,15 @@ function Invoke-PtSqlQuery {
     .PARAMETER QueryTimeout
     Seconds before the query is cancelled. Default 30.
 
+    .PARAMETER TrustServerCertificate
+    Accept the server's certificate without validating it. Needed for instances with a
+    self-signed certificate now that the SqlServer module (22.x and later) encrypts
+    connections by default. Only use it on networks you trust; the better fix is a
+    certificate from your CA. Needs a recent SqlServer module.
+
+    .PARAMETER Encrypt
+    Mandatory (default of newer modules) or Optional. Needs a recent SqlServer module.
+
     .PARAMETER ThrottleLimit
     How many instances to query at the same time when there are several. Default 4;
     1 means one after the other.
@@ -48,6 +57,11 @@ function Invoke-PtSqlQuery {
 
         [ValidateRange(0, 65535)]
         [int]$QueryTimeout = 30,
+
+        [switch]$TrustServerCertificate,
+
+        [ValidateSet('Mandatory', 'Optional')]
+        [string]$Encrypt,
 
         [ValidateRange(1, 64)]
         [int]$ThrottleLimit = 4
@@ -74,6 +88,13 @@ function Invoke-PtSqlQuery {
         if ($Credential) {
             $baseParameters['Username'] = $Credential.UserName
             $baseParameters['Password'] = $Credential.GetNetworkCredential().Password
+        }
+        foreach ($name in 'TrustServerCertificate', 'Encrypt') {
+            if (-not $PSBoundParameters.ContainsKey($name)) { continue }
+            if (-not (Test-PtCommandParameter -Command Invoke-Sqlcmd -Parameter $name)) {
+                throw "This version of Invoke-Sqlcmd has no -$name parameter. Update the SqlServer module: Update-Module SqlServer"
+            }
+            $baseParameters[$name] = $PSBoundParameters[$name]
         }
 
         if ($ThrottleLimit -gt 1 -and $servers.Count -gt 1) {

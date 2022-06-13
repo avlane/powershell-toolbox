@@ -7,7 +7,7 @@ BeforeAll {
     $manifest = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'PowerShellToolbox') 'PowerShellToolbox.psd1'
 
     # a stand-in so the command exists (and can be mocked) without the SqlServer module
-    function global:Invoke-Sqlcmd { param($ServerInstance, $Database, $Query, $QueryTimeout, $Username, $Password) }
+    function global:Invoke-Sqlcmd { param($ServerInstance, $Database, $Query, $QueryTimeout, $Username, $Password, [switch]$TrustServerCertificate, $Encrypt) }
 
     # global, so the module-scoped mocks can call it
     function global:New-TestDataRow {
@@ -85,6 +85,29 @@ Describe 'Invoke-PtSqlQuery' {
             Should -Invoke Invoke-Sqlcmd -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
                 $Username -eq 'monitor' -and $Password -eq 'not-a-real-password'
             }
+        }
+    }
+
+    Context 'connection security options' {
+        BeforeAll {
+            Mock Invoke-Sqlcmd -ModuleName PowerShellToolbox { }
+        }
+
+        It 'passes -TrustServerCertificate and -Encrypt on' {
+            Invoke-PtSqlQuery -ServerInstance 'SQLPROD01' -Query 'SELECT 1' -TrustServerCertificate -Encrypt Optional -ThrottleLimit 1 | Out-Null
+            Should -Invoke Invoke-Sqlcmd -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
+                $TrustServerCertificate -eq $true -and $Encrypt -eq 'Optional'
+            }
+        }
+
+        It 'does not send them when they were not asked for' {
+            Invoke-PtSqlQuery -ServerInstance 'SQLPROD01' -Query 'SELECT 1' -ThrottleLimit 1 | Out-Null
+            Should -Invoke Invoke-Sqlcmd -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { -not $TrustServerCertificate -and -not $Encrypt }
+        }
+
+        It 'explains that the SqlServer module is too old' {
+            Mock Test-PtCommandParameter -ModuleName PowerShellToolbox { $false }
+            { Invoke-PtSqlQuery -ServerInstance 'SQLPROD01' -Query 'SELECT 1' -TrustServerCertificate -ThrottleLimit 1 } | Should -Throw '*Update-Module SqlServer*'
         }
     }
 
