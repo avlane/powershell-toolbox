@@ -86,8 +86,15 @@ function Invoke-PtSqlQuery {
             ErrorAction  = 'Stop'
         }
         if ($Credential) {
-            $baseParameters['Username'] = $Credential.UserName
-            $baseParameters['Password'] = $Credential.GetNetworkCredential().Password
+            # newer Invoke-Sqlcmd takes the credential itself, which keeps the password
+            # as a SecureString; older ones only have -Username and -Password
+            if (Test-PtCommandParameter -Command Invoke-Sqlcmd -Parameter Credential) {
+                $baseParameters['Credential'] = $Credential
+            }
+            else {
+                $baseParameters['Username'] = $Credential.UserName
+                $baseParameters['Password'] = $Credential.GetNetworkCredential().Password
+            }
         }
         foreach ($name in 'TrustServerCertificate', 'Encrypt') {
             if (-not $PSBoundParameters.ContainsKey($name)) { continue }

@@ -7,7 +7,7 @@ BeforeAll {
     $manifest = Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'PowerShellToolbox') 'PowerShellToolbox.psd1'
 
     # a stand-in so the command exists (and can be mocked) without the SqlServer module
-    function global:Invoke-Sqlcmd { param($ServerInstance, $Database, $Query, $QueryTimeout, $Username, $Password, [switch]$TrustServerCertificate, $Encrypt) }
+    function global:Invoke-Sqlcmd { param($ServerInstance, $Database, $Query, $QueryTimeout, $Username, $Password, $Credential, [switch]$TrustServerCertificate, $Encrypt) }
 
     # global, so the module-scoped mocks can call it
     function global:New-TestDataRow {
@@ -80,10 +80,26 @@ Describe 'Invoke-PtSqlQuery' {
             $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList 'monitor', $secure
         }
 
-        It 'passes the user name and password on' {
+        It 'passes the user name and password on to an Invoke-Sqlcmd that has no -Credential' {
+            Mock Test-PtCommandParameter -ModuleName PowerShellToolbox { $false }
             Invoke-PtSqlQuery -ServerInstance 'SQLPROD01' -Query 'SELECT 1' -Credential $credential -ThrottleLimit 1 | Out-Null
             Should -Invoke Invoke-Sqlcmd -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
                 $Username -eq 'monitor' -and $Password -eq 'not-a-real-password'
+            }
+        }
+    }
+
+    Context 'a SQL login with a newer Invoke-Sqlcmd' {
+        BeforeAll {
+            Mock Invoke-Sqlcmd -ModuleName PowerShellToolbox { }
+            Mock Test-PtCommandParameter -ModuleName PowerShellToolbox { $true }
+            $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList 'monitor', (ConvertTo-SecureString 'not-a-real-password' -AsPlainText -Force)
+        }
+
+        It 'hands over the credential instead of a plain-text password' {
+            Invoke-PtSqlQuery -ServerInstance 'SQLPROD01' -Query 'SELECT 1' -Credential $credential -ThrottleLimit 1 | Out-Null
+            Should -Invoke Invoke-Sqlcmd -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
+                $Credential.UserName -eq 'monitor' -and -not $Password
             }
         }
     }
