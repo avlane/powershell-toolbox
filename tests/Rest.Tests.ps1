@@ -53,6 +53,19 @@ Describe 'Invoke-PtRestRetry' {
         Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -eq 7 }
     }
 
+    It 'waits until the date in an HTTP-date Retry-After' {
+        Mock Invoke-RestMethod -ModuleName PowerShellToolbox {
+            $global:PtTestCalls++
+            if ($global:PtTestCalls -lt 2) { throw 'too many requests' }
+            'ok'
+        }
+        Mock Get-PtHttpErrorDetail -ModuleName PowerShellToolbox {
+            [pscustomobject]@{ StatusCode = 429; RetryAfter = [datetimeoffset]::UtcNow.AddSeconds(30).ToString('r'); IsNetworkError = $false; Message = 'slow down' }
+        }
+        Invoke-PtRestRetry -Uri 'https://api.example.com/x' | Should -Be 'ok'
+        Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -ge 28 -and $Seconds -le 31 }
+    }
+
     It 'retries network errors' {
         Mock Invoke-RestMethod -ModuleName PowerShellToolbox {
             $global:PtTestCalls++
@@ -166,6 +179,24 @@ Describe 'Get-PtHttpErrorDetail' {
         $detail.StatusCode | Should -Be 429
         $detail.RetryAfter | Should -Be '9'
         $detail.IsNetworkError | Should -Be $false
+    }
+}
+
+Describe 'ConvertFrom-PtRetryAfter' {
+    It 'understands seconds and HTTP dates' -ForEach @(
+        @{ Value = '120'; Expected = 120 },
+        @{ Value = ' 7 '; Expected = 7 },
+        @{ Value = 'Wed, 21 Oct 2015 07:28:30 GMT'; Expected = 30 },
+        @{ Value = 'Wed, 21 Oct 2015 07:20:00 GMT'; Expected = 0 },
+        @{ Value = '99999'; Expected = 300 },
+        @{ Value = 'Thu, 22 Oct 2015 07:28:00 GMT'; Expected = 300 },
+        @{ Value = 'soon'; Expected = $null },
+        @{ Value = ''; Expected = $null }
+    ) {
+        $result = InModuleScope PowerShellToolbox -Parameters @{ Value = $Value } {
+            ConvertFrom-PtRetryAfter -Value $Value -Now ([datetimeoffset]::new(2015, 10, 21, 7, 28, 0, [timespan]::Zero))
+        }
+        $result | Should -Be $Expected
     }
 }
 

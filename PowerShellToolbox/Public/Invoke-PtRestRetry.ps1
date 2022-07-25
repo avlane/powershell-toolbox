@@ -5,8 +5,9 @@ function Invoke-PtRestRetry {
 
     .DESCRIPTION
     Retries on network errors and on HTTP 429, 500, 502, 503 and 504, up to
-    MaxRetries more times. Between tries it waits for the number of seconds in the
-    Retry-After header when the server sent one, otherwise it backs off
+    MaxRetries more times. Between tries it waits as long as the Retry-After header
+    says when the server sent one (as seconds or as an HTTP date, but never more than
+    five minutes), otherwise it backs off
     exponentially (2, 4, 8 ... seconds, at most 60). Other errors, for example 400,
     401 or 404, are thrown immediately because trying again cannot help.
 
@@ -131,7 +132,8 @@ function Invoke-PtRestRetry {
         }
 
         $delay = [math]::Min(60, $InitialDelaySeconds * [math]::Pow(2, $attempt - 1))
-        if ($detail.RetryAfter -match '^\d+$') { $delay = [int]$detail.RetryAfter }
+        $retryAfter = ConvertFrom-PtRetryAfter -Value $detail.RetryAfter
+        if ($null -ne $retryAfter) { $delay = $retryAfter }
 
         Write-Verbose "Attempt $attempt of $($MaxRetries + 1) failed ($($detail.Message)); waiting $delay seconds."
         Start-Sleep -Seconds $delay
