@@ -54,6 +54,25 @@ Describe 'Export-PtReport' {
         $text | Should -Match '<tr><td>e</td>'
     }
 
+    It 'uses the delimiter it is given' {
+        $file = $rows | Export-PtReport -Path (Join-Path $TestDrive 'semi.csv') -Delimiter ';'
+        (Get-Content -LiteralPath $file.FullName)[0] | Should -Be '"Name";"FreeGB";"Note"'
+    }
+
+    It 'writes a byte order mark only when asked to' {
+        $plain = $rows | Export-PtReport -Path (Join-Path $TestDrive 'plain.csv')
+        $bom = $rows | Export-PtReport -Path (Join-Path $TestDrive 'bom.csv') -Encoding utf8BOM
+        [System.IO.File]::ReadAllBytes($plain.FullName)[0] | Should -Be ([byte][char]'"')
+        ([System.IO.File]::ReadAllBytes($bom.FullName)[0..2] -join ',') | Should -Be '239,187,191'
+    }
+
+    It 'keeps nested objects up to -JsonDepth and can write compact JSON' {
+        $nested = [pscustomobject]@{ Name = 'a'; Inner = [pscustomobject]@{ Deep = [pscustomobject]@{ Value = 1 } } }
+        $file = $nested | Export-PtReport -Path (Join-Path $TestDrive 'nested.json') -JsonDepth 4 -Compress
+        $text = (Get-Content -LiteralPath $file.FullName -Raw).Trim()
+        $text | Should -Be '[{"Name":"a","Inner":{"Deep":{"Value":1}}}]'
+    }
+
     It 'creates the folder' {
         $path = Join-Path (Join-Path (Join-Path $TestDrive 'a') 'b') 'c.json'
         $rows | Export-PtReport -Path $path | Out-Null

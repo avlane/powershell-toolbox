@@ -26,6 +26,22 @@ function Export-PtReport {
     .PARAMETER Title
     The heading of the HTML report.
 
+    .PARAMETER Delimiter
+    The CSV field separator. Default a comma; use ';' for Excel in locales that
+    expect a semicolon.
+
+    .PARAMETER Encoding
+    utf8 (default; PowerShell 7 writes no byte order mark), utf8BOM, utf8NoBOM, utf32
+    or ascii. Excel only recognises a UTF-8 CSV as such when it starts with a byte
+    order mark, so use utf8BOM for files that are meant to be opened in Excel.
+
+    .PARAMETER JsonDepth
+    How many levels of nested objects to write to JSON. Default 5. Deeper levels are
+    flattened to their type name by ConvertTo-Json, which is rarely what you want.
+
+    .PARAMETER Compress
+    Write the JSON on one line instead of indented.
+
     .EXAMPLE
     Get-PtDiskReport -ComputerName SQLPROD01, SQLPROD02 | Export-PtReport -Path .\disks.html -Title 'Disk space'
     #>
@@ -41,7 +57,18 @@ function Export-PtReport {
         [ValidateSet('Csv', 'Json', 'Html')]
         [string]$Format,
 
-        [string]$Title = 'Report'
+        [string]$Title = 'Report',
+
+        [ValidateLength(1, 1)]
+        [string]$Delimiter = ',',
+
+        [ValidateSet('utf8', 'utf8BOM', 'utf8NoBOM', 'utf32', 'ascii')]
+        [string]$Encoding = 'utf8',
+
+        [ValidateRange(1, 100)]
+        [int]$JsonDepth = 5,
+
+        [switch]$Compress
     )
 
     begin {
@@ -71,11 +98,11 @@ function Export-PtReport {
 
             switch ($Format) {
                 'Csv' {
-                    if ($items.Count -gt 0) { $items | Export-Csv -LiteralPath $Path -NoTypeInformation -Encoding UTF8 }
-                    else { Set-Content -LiteralPath $Path -Value '' -Encoding UTF8 }
+                    if ($items.Count -gt 0) { $items | Export-Csv -LiteralPath $Path -NoTypeInformation -Delimiter $Delimiter -Encoding $Encoding }
+                    else { Set-Content -LiteralPath $Path -Value '' -Encoding $Encoding }
                 }
                 'Json' {
-                    ConvertTo-Json -InputObject $items.ToArray() -Depth 5 | Set-Content -LiteralPath $Path -Encoding UTF8
+                    ConvertTo-Json -InputObject $items.ToArray() -Depth $JsonDepth -Compress:$Compress | Set-Content -LiteralPath $Path -Encoding $Encoding
                 }
                 'Html' {
                     $encode = { param($text) [System.Net.WebUtility]::HtmlEncode([string]$text) }
@@ -104,7 +131,7 @@ function Export-PtReport {
                         [void]$html.AppendLine('</table>')
                     }
                     [void]$html.AppendLine('</body></html>')
-                    Set-Content -LiteralPath $Path -Value $html.ToString() -Encoding UTF8
+                    Set-Content -LiteralPath $Path -Value $html.ToString() -Encoding $Encoding
                 }
             }
 
