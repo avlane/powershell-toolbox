@@ -40,6 +40,7 @@
         'New-PtJiraIssue',
         'Register-PtMaintenanceTask',
         'Remove-PtOldFile',
+        'Rename-PtFileBulk',
         'Restart-PtFailedService',
         'Search-PtJiraIssue',
         'Set-PtSecret'
