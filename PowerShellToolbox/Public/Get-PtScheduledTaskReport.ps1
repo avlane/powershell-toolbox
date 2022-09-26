@@ -5,7 +5,9 @@ function Get-PtScheduledTaskReport {
 
     .DESCRIPTION
     Combines Get-ScheduledTask and Get-ScheduledTaskInfo. Status is
-    Disabled, NeverRun, Failed (the last result is an error code), Running or OK.
+    Disabled, NeverRun, Failed (the last result is an error code), Overdue (the next
+    run time is already well in the past, which means the scheduler missed it),
+    Running or OK.
     Tasks under \Microsoft\ are left out unless -IncludeMicrosoft is given, since
     Windows ships hundreds of them.
 
@@ -17,6 +19,10 @@ function Get-PtScheduledTaskReport {
 
     .PARAMETER IncludeMicrosoft
     Also list the tasks under \Microsoft\.
+
+    .PARAMETER OverdueHours
+    A ready task whose next run time lies more than this many hours in the past is
+    Overdue. Default 1.
 
     .PARAMETER OnlyProblems
     Leave out tasks whose Status is OK, Running or Disabled.
@@ -32,6 +38,9 @@ function Get-PtScheduledTaskReport {
         [string]$TaskPath = '\*',
 
         [switch]$IncludeMicrosoft,
+
+        [ValidateRange(0, 8760)]
+        [int]$OverdueHours = 1,
 
         [switch]$OnlyProblems
     )
@@ -75,9 +84,10 @@ function Get-PtScheduledTaskReport {
                 elseif ($task.State -eq 'Running') { $status = 'Running' }
                 elseif ($result -eq 0x41303) { $status = 'NeverRun' }
                 elseif ($null -ne $result -and $okResults -notcontains $result) { $status = 'Failed' }
+                elseif ($info.NextRunTime -and $info.NextRunTime -lt (Get-Date).AddHours(-$OverdueHours)) { $status = 'Overdue' }
                 else { $status = 'OK' }
 
-                if ($OnlyProblems -and $status -notin 'Failed', 'NeverRun') { continue }
+                if ($OnlyProblems -and $status -notin 'Failed', 'NeverRun', 'Overdue') { continue }
 
                 $action = $task.Actions | Select-Object -First 1
                 [pscustomobject]@{
