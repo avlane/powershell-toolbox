@@ -42,6 +42,22 @@ Describe 'Get-PtCertificateExpiry' {
             Should -Invoke Invoke-Command -ModuleName PowerShellToolbox -Times 0 -Exactly
         }
 
+        It 'filters by subject' {
+            $filtered = @(Get-PtCertificateExpiry -ComputerName 'localhost' -Subject '*soon*')
+            $filtered.Count | Should -Be 1
+            $filtered[0].Thumbprint | Should -Be 'BBBB'
+        }
+
+        It 'ignores excluded thumbprints' {
+            $filtered = @(Get-PtCertificateExpiry -ComputerName 'localhost' -ExcludeThumbprint 'CCCC')
+            $filtered.Thumbprint -join ',' | Should -Be 'BBBB,AAAA'
+        }
+
+        It 'can show only the problems' {
+            $filtered = @(Get-PtCertificateExpiry -ComputerName 'localhost' -OnlyProblems)
+            $filtered.Thumbprint -join ',' | Should -Be 'CCCC,BBBB'
+        }
+
         It 'uses the warning window' {
             $wide = @(Get-PtCertificateExpiry -ComputerName 'localhost' -WarningDays 365)
             ($wide | Where-Object Thumbprint -eq 'AAAA').Status | Should -Be 'Expiring'
