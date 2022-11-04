@@ -8,22 +8,26 @@ jobs:
   pester:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Install Pester 5
         shell: pwsh
         run: Install-Module -Name Pester -MinimumVersion 5.0.0 -Force -SkipPublisherCheck -Scope CurrentUser
       - name: Run the tests
         shell: pwsh
         run: ./scripts/Invoke-Tests.ps1
+      - name: Keep the test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results
+          path: TestResults.xml
 
   lint:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: PSScriptAnalyzer
         shell: pwsh
         run: |
           Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
-          $results = Invoke-ScriptAnalyzer -Path ./PowerShellToolbox -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
-          $results | Format-Table -AutoSize
-          if ($results.Where({ $_.Severity -eq 'Error' })) { exit 1 }
+          ./scripts/Invoke-Lint.ps1
