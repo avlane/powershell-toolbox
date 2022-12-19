@@ -38,24 +38,40 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 
 | command | what it does |
 | --- | --- |
-| `Get-PtDiskReport` | free space of fixed disks, flags low ones |
+| **Servers and Windows** | |
+| `Get-PtDiskReport` | free space of fixed disks, flags low ones (parallel over computers) |
 | `Get-PtServiceTriage` | automatic services that are not running |
+| `Restart-PtFailedService` | start such services through CIM and wait for them (`-WhatIf` aware) |
 | `Get-PtEventLogSummary` | errors and warnings grouped by provider and event id |
-| `Invoke-PtSqlQuery` | run T-SQL on several instances, get plain objects back |
-| `Get-PtBackupStatus` | last full, differential and log backup per database, with a verdict |
-| `Get-PtAgentJobReport` | SQL Server Agent jobs: last result, next run, recent failures |
-| `Get-PtRestoreStatus` | running restores and restore history |
-| `Get-PtScheduledTaskReport` | scheduled tasks with last result and a status |
-| `Register-PtMaintenanceTask` | create a daily/weekly scheduled task for a script (`-WhatIf` aware) |
 | `Get-PtCertificateExpiry` | certificates in a store with days until expiry |
-| `Get-PtAzureInventory` | resources and tags per subscription (Az) |
+| `Get-PtScheduledTaskReport` | scheduled tasks with last result and a status (Failed, Overdue, ...) |
+| `Register-PtMaintenanceTask` | create a daily/weekly scheduled task for a script |
+| **SQL Server** | |
+| `Invoke-PtSqlQuery` | run T-SQL on several instances (in parallel), get plain objects back |
+| `Get-PtBackupStatus` | last full, differential and log backup per database, with a verdict |
+| `Get-PtRestoreStatus` | running restores and restore history |
+| `Get-PtAgentJobReport` | Agent jobs: last result, next run, recent failures, failed step |
+| `Get-PtDatabaseSpace` | file sizes, growth settings, volume free space |
+| `Get-PtBlockingSession` | blocked requests, chains and head blockers |
+| `Get-PtLongRunningQuery` | user requests that have run for a while |
+| **Files** | |
 | `Remove-PtOldFile` | delete old files with `-WhatIf` / `-Confirm` support |
-| `Export-PtReport` | write objects to CSV, JSON or HTML |
+| `Compress-PtOldFile` | zip old files one by one, remove the original after a check |
+| `Copy-PtFileSafe` | copy or move with a hash check before the final rename |
+| `Rename-PtFileBulk` | regex renames that refuse collisions |
+| **REST and Jira Cloud** | |
 | `Invoke-PtRestRetry` | `Invoke-RestMethod` with retries, back-off and Retry-After |
 | `Invoke-PtRestPaged` | follow a Link header or a next-link property through all pages |
-| `Connect-PtJira`, `Invoke-PtJiraRequest` | sign in to Jira Cloud with an API token; raw API calls |
+| `Connect-PtJira`, `Invoke-PtJiraRequest` | sign in with an API token; raw API calls |
 | `Search-PtJiraIssue`, `Get-PtJiraIssue` | JQL search and single issues as flat objects |
-| `Add-PtJiraComment`, `Get-PtJiraTransition`, `Invoke-PtJiraTransition` | comment on and move issues |
+| `New-PtJiraIssue`, `Add-PtJiraComment`, `Add-PtJiraWorklog` | create issues, comment, log time |
+| `Get-PtJiraTransition`, `Invoke-PtJiraTransition` | move issues through the workflow |
+| `Find-PtJiraUser` | find account ids by name or e-mail |
+| **Azure, secrets and output** | |
+| `Get-PtAzureInventory` | resources and tags per subscription (Az), missing required tags |
+| `Initialize-PtVault`, `Set-PtSecret`, `Get-PtSecret` | SecretManagement / SecretStore helpers |
+| `Export-PtReport` | write objects to CSV, JSON or HTML |
+| `Format-PtStatusSummary` | "OK: 12, Low: 2, Failed: 1" for any report |
 
 ## Tests
 

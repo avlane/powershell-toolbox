@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 - 2022-12
+
+- New: `Find-PtJiraUser`, `New-PtJiraIssue`, `Add-PtJiraWorklog`, `Rename-PtFileBulk`.
+- `Invoke-PtSqlQuery` queries instances in parallel, understands
+  `-TrustServerCertificate` / `-Encrypt` and passes `-Credential` to newer
+  `Invoke-Sqlcmd` versions.
+- `Invoke-PtRestRetry` reads Retry-After given as an HTTP date.
+- `Get-PtAgentJobReport -IncludeStepDetail`; `Get-PtScheduledTaskReport` flags
+  `Overdue` tasks; `Get-PtCertificateExpiry` filters.
+- `Export-PtReport`: `-Delimiter`, `-Encoding`, `-JsonDepth`, `-Compress`.
+- CI: `scripts/Invoke-Lint.ps1`, test results kept as an artifact.
+
 ## 1.0.0 - 2022-02
 
 - **Breaking:** requires PowerShell 7.2 or later; Windows PowerShell 5.1 is no

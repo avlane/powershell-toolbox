@@ -26,5 +26,5 @@ $results = foreach ($path in $paths) {
 $results | Format-Table -AutoSize -Property Severity, RuleName, ScriptName, Line, Message
 
 $failing = @($results | Where-Object { $_.Severity -eq 'Error' -or ($Strict -and $_.Severity -eq 'Warning') })
-Write-Host "$(@($results).Count) finding(s), $($failing.Count) of them failing."
+Write-Output "$(@($results).Count) finding(s), $($failing.Count) of them failing."
 if ($failing.Count -gt 0) { exit 1 }
