@@ -18,6 +18,7 @@
         'Format-PtStatusSummary',
         'Get-PtAgentJobReport',
         'Get-PtAzureInventory',
+        'Get-PtAzVmInventory',
         'Get-PtBackupStatus',
         'Get-PtBlockingSession',
         'Get-PtCertificateExpiry',
