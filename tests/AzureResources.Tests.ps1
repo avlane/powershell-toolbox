@@ -120,4 +120,8 @@ Describe 'Get-PtAzSqlInventory' {
         ($inventory | Where-Object Database -eq 'app-sql-prod').Flags | Should -Be ''
         ($inventory | Where-Object Database -eq 'app-sql-old').Flags | Should -Be 'PublicAccess, OldTls'
     }
+
+    It 'treats a minimum TLS version of None as old' {
+        ($inventory | Where-Object Server -eq 'sql-empty.database.windows.net').Flags | Should -Be 'OldTls'
+    }
 }
