@@ -21,6 +21,7 @@
         'Get-PtAzSqlInventory',
         'Get-PtAzVmInventory',
         'Get-PtBackupStatus',
+        'Get-PtBackupChain',
         'Get-PtBlockingSession',
         'Get-PtCertificateExpiry',
         'Get-PtDatabaseSpace',
