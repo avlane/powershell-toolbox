@@ -34,6 +34,7 @@
         'Get-PtScheduledTaskReport',
         'Get-PtSecret',
         'Get-PtServiceTriage',
+        'Get-PtSqlServerInfo',
         'Initialize-PtVault',
         'Invoke-PtJiraRequest',
         'Invoke-PtJiraTransition',
