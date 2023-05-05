@@ -41,7 +41,7 @@ Describe 'Get-PtSqlServerInfo' {
                 [pscustomobject]@{
                     MachineName = 'SQLPROD02'; ProductVersion = '16.0.1000.6'; ProductLevel = 'RTM'; ProductUpdateLevel = $null
                     Edition = 'Standard Edition (64-bit)'; IsClustered = 1; IsHadrEnabled = 0
-                    StartTime = [datetime]'2023-03-15 08:00:00'; ServerTime = [datetime]'2023-03-15 14:00:00'
+                    StartTime = [datetime]'2023-03-15 08:00:00'; ServerTime = [datetime]'2023-03-15 15:00:00'
                     CpuCount = 4; PhysicalMemoryMB = 32768; MaxServerMemoryMB = 28672; Maxdop = 4; CostThreshold = 50; TempdbFiles = 4
                 }
             }

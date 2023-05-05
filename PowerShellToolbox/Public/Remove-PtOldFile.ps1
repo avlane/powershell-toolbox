@@ -25,6 +25,12 @@ function Remove-PtOldFile {
     .PARAMETER Recurse
     Also look in sub-folders.
 
+    .PARAMETER Recycle
+    Send files to the Recycle Bin instead of deleting them for good. Only the user
+    who runs the command can restore them, so this is for interactive clean-ups, not
+    for scheduled jobs under another account. Not available for network paths, which
+    have no Recycle Bin and are rejected.
+
     .PARAMETER RemoveEmptyFolders
     With -Recurse, delete sub-folders that are empty after the files were removed.
 
@@ -47,6 +53,8 @@ function Remove-PtOldFile {
 
         [switch]$Recurse,
 
+        [switch]$Recycle,
+
         [switch]$RemoveEmptyFolders
     )
 
@@ -64,6 +72,11 @@ function Remove-PtOldFile {
                 continue
             }
 
+            if ($Recycle -and $resolved.StartsWith('\\')) {
+                Write-Error "The Recycle Bin cannot be used for the network path $resolved."
+                continue
+            }
+
             $searchParameters = @{ LiteralPath = $resolved; Filter = $Filter; File = $true; Force = $true; ErrorAction = 'SilentlyContinue' }
             if ($Recurse) { $searchParameters['Recurse'] = $true }
 
@@ -72,7 +85,13 @@ function Remove-PtOldFile {
                 $failure = $null
                 if ($PSCmdlet.ShouldProcess($file.FullName, "Delete (last written $($file.LastWriteTime))")) {
                     try {
-                        Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
+                        if ($Recycle) {
+                            Add-Type -AssemblyName Microsoft.VisualBasic
+                            [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($file.FullName, 'OnlyErrorDialogs', 'SendToRecycleBin')
+                        }
+                        else {
+                            Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
+                        }
                         $removed = $true
                     }
                     catch {
