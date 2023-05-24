@@ -337,3 +337,39 @@ Describe 'Add-PtJiraWorklog' {
         Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 0 -Exactly
     }
 }
+
+Describe 'New-PtJql' {
+    It 'builds a single condition' {
+        New-PtJql -Project OPS | Should -Be 'project = "OPS"'
+    }
+
+    It 'turns several values into IN (...)' {
+        New-PtJql -Status 'In Progress', 'Open' | Should -Be 'status IN ("In Progress", "Open")'
+    }
+
+    It 'joins conditions with AND and sorts' {
+        $jql = New-PtJql -Project OPS -NotStatusCategory Done -UpdatedWithinDays 7 -OrderBy updated -Descending
+        $jql | Should -Be 'project = "OPS" AND statusCategory != "Done" AND updated >= -7d ORDER BY updated DESC'
+    }
+
+    It 'handles unassigned issues, labels, text and dates' {
+        $jql = New-PtJql -Unassigned -Label disk, sql -Text 'disk full' -CreatedAfter ([datetime]'2023-05-01')
+        $jql | Should -Be 'assignee IS EMPTY AND labels = "disk" AND labels = "sql" AND created >= "2023-05-01" AND text ~ "disk full"'
+    }
+
+    It 'escapes quotes and backslashes in values' {
+        New-PtJql -Text 'say "hi" \ there' | Should -Be 'text ~ "say \"hi\" \\ there"'
+    }
+
+    It 'wraps extra clauses in parentheses' {
+        New-PtJql -Project OPS -Clause 'priority = High OR labels = urgent' | Should -Be 'project = "OPS" AND (priority = High OR labels = urgent)'
+    }
+
+    It 'gives an empty string when nothing is asked for' {
+        New-PtJql | Should -Be ''
+    }
+
+    It 'rejects an order-by field that could carry more JQL' {
+        { New-PtJql -OrderBy 'updated; DROP' } | Should -Throw
+    }
+}

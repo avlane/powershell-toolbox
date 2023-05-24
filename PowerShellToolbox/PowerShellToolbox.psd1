@@ -42,6 +42,7 @@
         'Invoke-PtRestRetry',
         'Invoke-PtSqlQuery',
         'New-PtJiraIssue',
+        'New-PtJql',
         'Register-PtMaintenanceTask',
         'Remove-PtOldFile',
         'Rename-PtFileBulk',
