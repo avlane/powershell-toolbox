@@ -36,6 +36,11 @@ function Invoke-PtRestRetry {
     .PARAMETER TimeoutSec
     Timeout of each attempt. Default 60.
 
+    .PARAMETER NoJitter
+    By default each back-off delay is varied randomly by up to 25 percent either way,
+    so that many clients that failed together do not all retry at the same instant.
+    -NoJitter turns that off. A delay taken from Retry-After is never changed.
+
     .PARAMETER Raw
     Return the web response (status, headers, content) from Invoke-WebRequest
     instead of the parsed body from Invoke-RestMethod. Needed to read headers such
@@ -64,6 +69,8 @@ function Invoke-PtRestRetry {
 
         [ValidateRange(1, 3600)]
         [int]$TimeoutSec = 60,
+
+        [switch]$NoJitter,
 
         [switch]$Raw
     )
@@ -131,9 +138,14 @@ function Invoke-PtRestRetry {
             throw "$($detail.Message) from $Uri : $text"
         }
 
-        $delay = [math]::Min(60, $InitialDelaySeconds * [math]::Pow(2, $attempt - 1))
         $retryAfter = ConvertFrom-PtRetryAfter -Value $detail.RetryAfter
-        if ($null -ne $retryAfter) { $delay = $retryAfter }
+        if ($null -ne $retryAfter) {
+            $delay = $retryAfter
+        }
+        else {
+            $delay = [math]::Min(60, $InitialDelaySeconds * [math]::Pow(2, $attempt - 1))
+            if (-not $NoJitter) { $delay = [math]::Round($delay * (0.75 + (Get-Random -Minimum 0.0 -Maximum 0.5)), 1) }
+        }
 
         Write-Verbose "Attempt $attempt of $($MaxRetries + 1) failed ($($detail.Message)); waiting $delay seconds."
         Start-Sleep -Seconds $delay

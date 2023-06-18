@@ -12,6 +12,8 @@ Describe 'Invoke-PtRestRetry' {
     BeforeEach {
         $global:PtTestCalls = 0
         Mock Start-Sleep -ModuleName PowerShellToolbox { }
+        # 0.25 is the middle of the jitter range, so the delays come out unchanged
+        Mock Get-Random -ModuleName PowerShellToolbox { 0.25 }
     }
 
     AfterAll {
@@ -38,6 +40,26 @@ Describe 'Invoke-PtRestRetry' {
         Should -Invoke Invoke-RestMethod -ModuleName PowerShellToolbox -Times 3 -Exactly
         Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -eq 2 }
         Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -eq 4 }
+    }
+
+    It 'varies the back-off by up to a quarter either way' {
+        Mock Invoke-RestMethod -ModuleName PowerShellToolbox { $global:PtTestCalls++; throw 'busy' }
+        Mock Get-PtHttpErrorDetail -ModuleName PowerShellToolbox {
+            [pscustomobject]@{ StatusCode = 503; RetryAfter = $null; IsNetworkError = $false; Message = 'busy' }
+        }
+        Mock Get-Random -ModuleName PowerShellToolbox { 0.0 }
+        { Invoke-PtRestRetry -Uri 'https://api.example.com/x' -MaxRetries 1 } | Should -Throw
+        Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -eq 1.5 }
+    }
+
+    It 'leaves the back-off alone with -NoJitter' {
+        Mock Invoke-RestMethod -ModuleName PowerShellToolbox { $global:PtTestCalls++; throw 'busy' }
+        Mock Get-PtHttpErrorDetail -ModuleName PowerShellToolbox {
+            [pscustomobject]@{ StatusCode = 503; RetryAfter = $null; IsNetworkError = $false; Message = 'busy' }
+        }
+        Mock Get-Random -ModuleName PowerShellToolbox { 0.0 }
+        { Invoke-PtRestRetry -Uri 'https://api.example.com/x' -MaxRetries 1 -NoJitter } | Should -Throw
+        Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -eq 2 }
     }
 
     It 'waits as long as Retry-After says' {
