@@ -279,6 +279,42 @@ Describe 'Invoke-PtRestPaged' {
         }
     }
 
+    Context 'paging by offset' {
+        BeforeAll {
+            Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox -ParameterFilter { $Uri -eq 'https://api.example.com/items?offset=0&limit=2' } {
+                [pscustomobject]@{ items = @('a', 'b') }
+            }
+            Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox -ParameterFilter { $Uri -eq 'https://api.example.com/items?offset=2&limit=2' } {
+                [pscustomobject]@{ items = @('c', 'd') }
+            }
+            Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox -ParameterFilter { $Uri -eq 'https://api.example.com/items?offset=4&limit=2' } {
+                [pscustomobject]@{ items = @('e') }
+            }
+        }
+
+        It 'advances the offset by the number of items and stops at a short page' {
+            $items = @(Invoke-PtRestPaged -Uri 'https://api.example.com/items' -ItemsProperty items -OffsetParameter offset -LimitParameter limit -PageSize 2)
+            $items -join ',' | Should -Be 'a,b,c,d,e'
+            Should -Invoke Invoke-PtRestRetry -ModuleName PowerShellToolbox -Times 3 -Exactly
+        }
+    }
+
+    Context 'paging by page number' {
+        BeforeAll {
+            Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox -ParameterFilter { $Uri -eq 'https://api.example.com/items?type=x&page=1&per_page=3' } {
+                @('a', 'b', 'c')
+            }
+            Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox -ParameterFilter { $Uri -eq 'https://api.example.com/items?type=x&page=2&per_page=3' } {
+                @('d')
+            }
+        }
+
+        It 'starts at page 1 and adds to an existing query string' {
+            $items = @(Invoke-PtRestPaged -Uri 'https://api.example.com/items?type=x' -OffsetParameter page -LimitParameter per_page -PageSize 3 -PageBased)
+            $items -join ',' | Should -Be 'a,b,c,d'
+        }
+    }
+
     Context 'safety' {
         It 'stops at MaxPages' {
             Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox {
@@ -290,7 +326,8 @@ Describe 'Invoke-PtRestPaged' {
 
         It 'needs to know how to find the next page' {
             { Invoke-PtRestPaged -Uri 'https://api.example.com/x' } | Should -Throw '*Say how to find the next page*'
-            { Invoke-PtRestPaged -Uri 'https://api.example.com/x' -UseLinkHeader -NextLinkProperty next } | Should -Throw '*not both*'
+            { Invoke-PtRestPaged -Uri 'https://api.example.com/x' -UseLinkHeader -NextLinkProperty next } | Should -Throw '*only one of*'
+            { Invoke-PtRestPaged -Uri 'https://api.example.com/x' -UseLinkHeader -OffsetParameter offset } | Should -Throw '*only one of*'
         }
     }
 }
