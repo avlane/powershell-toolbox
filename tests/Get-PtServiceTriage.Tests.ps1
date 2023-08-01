@@ -40,6 +40,47 @@ Describe 'Get-PtServiceTriage' {
         }
     }
 
+    Context 'with the last event' {
+        BeforeAll {
+            Mock Get-CimInstance -ModuleName PowerShellToolbox {
+                @(
+                    [pscustomobject]@{ Name = 'MSSQLSERVER'; DisplayName = 'SQL Server (MSSQLSERVER)'; State = 'Stopped'; StartName = 'CORP\svc-sql'; ExitCode = 1067 },
+                    [pscustomobject]@{ Name = 'Spooler'; DisplayName = 'Print Spooler'; State = 'Stopped'; StartName = 'LocalSystem'; ExitCode = 0 }
+                )
+            }
+            Mock Get-WinEvent -ModuleName PowerShellToolbox {
+                @(
+                    [pscustomobject]@{ TimeCreated = [datetime]'2023-07-29 03:00:00'; Id = 7031; Message = "The SQL Server (MSSQLSERVER) service terminated unexpectedly.`r`nIt has done this 1 time(s)." },
+                    [pscustomobject]@{ TimeCreated = [datetime]'2023-07-30 01:00:00'; Id = 7034; Message = 'The SQL Server (MSSQLSERVER) service terminated unexpectedly.' },
+                    [pscustomobject]@{ TimeCreated = [datetime]'2023-07-28 01:00:00'; Id = 7000; Message = 'Something about another service.' }
+                )
+            }
+        }
+
+        It 'adds the newest matching event to each service' {
+            $result = @(Get-PtServiceTriage -ComputerName 'SQLPROD01' -IncludeLastEvent)
+            $sql = $result | Where-Object Name -eq 'MSSQLSERVER'
+            $sql.LastEventId | Should -Be 7034
+            $sql.LastEventTime | Should -Be ([datetime]'2023-07-30 01:00:00')
+            $sql.LastEventMessage | Should -Be 'The SQL Server (MSSQLSERVER) service terminated unexpectedly.'
+        }
+
+        It 'leaves the event columns empty for a service without events' {
+            $spooler = Get-PtServiceTriage -ComputerName 'SQLPROD01' -IncludeLastEvent | Where-Object Name -eq 'Spooler'
+            $spooler.LastEventTime | Should -BeNullOrEmpty
+            $spooler.LastEventMessage | Should -BeNullOrEmpty
+        }
+
+        It 'does not read the event log unless asked to' {
+            Get-PtServiceTriage -ComputerName 'SQLPROD01' | Out-Null
+            Should -Invoke Get-WinEvent -ModuleName PowerShellToolbox -Times 0 -Exactly
+        }
+
+        It 'adds no event columns by default' {
+            (Get-PtServiceTriage -ComputerName 'SQLPROD01' | Select-Object -First 1).PSObject.Properties.Name | Should -Not -Contain 'LastEventId'
+        }
+    }
+
     Context 'a computer that cannot be reached' {
         BeforeAll {
             Mock Get-CimInstance -ModuleName PowerShellToolbox { throw 'WinRM cannot process the request' }

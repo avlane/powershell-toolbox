@@ -12,6 +12,12 @@ function Get-PtServiceTriage {
     .PARAMETER ComputerName
     The computers to query. Defaults to the local computer.
 
+    .PARAMETER IncludeLastEvent
+    For each service, look in the System log of the last 7 days for the newest
+    Service Control Manager event that names it (terminated unexpectedly, failed to
+    start, logon failure ...) and add its time, id and first line as LastEventTime,
+    LastEventId and LastEventMessage. Costs one extra event log query per computer.
+
     .PARAMETER IncludeExpected
     Also list services that normally stop on their own, such as the Software
     Protection and Google Update services.
@@ -27,7 +33,9 @@ function Get-PtServiceTriage {
         [Parameter(ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string[]]$ComputerName = $env:COMPUTERNAME,
 
-        [switch]$IncludeExpected
+        [switch]$IncludeExpected,
+
+        [switch]$IncludeLastEvent
     )
 
     begin {
@@ -45,10 +53,24 @@ function Get-PtServiceTriage {
                 continue
             }
 
+            $events = @()
+            if ($IncludeLastEvent) {
+                # 7000/7001/7009/7011/7023/7024/7031/7034: failed to start, timeout, stopped or crashed
+                $filter = @{ LogName = 'System'; ProviderName = 'Service Control Manager'; Id = 7000, 7001, 7009, 7011, 7023, 7024, 7031, 7034; StartTime = (Get-Date).AddDays(-7) }
+                try {
+                    $events = @(Get-WinEvent -ComputerName $computer -FilterHashtable $filter -MaxEvents 500 -ErrorAction Stop)
+                }
+                catch {
+                    if ($_.FullyQualifiedErrorId -notlike 'NoMatchingEventsFound*') {
+                        Write-Warning "Could not read the System log on $computer : $($_.Exception.Message)"
+                    }
+                }
+            }
+
             foreach ($service in $services) {
                 if (-not $IncludeExpected -and $expected -contains $service.Name) { continue }
 
-                [pscustomobject]@{
+                $row = [ordered]@{
                     ComputerName = $computer
                     Name         = $service.Name
                     DisplayName  = $service.DisplayName
@@ -56,6 +78,15 @@ function Get-PtServiceTriage {
                     StartName    = $service.StartName
                     ExitCode     = $service.ExitCode
                 }
+
+                if ($IncludeLastEvent) {
+                    $last = $events | Where-Object { $_.Message -like "*$($service.DisplayName)*" } | Sort-Object -Property TimeCreated -Descending | Select-Object -First 1
+                    $row['LastEventTime'] = ${last}?.TimeCreated
+                    $row['LastEventId'] = ${last}?.Id
+                    $row['LastEventMessage'] = $last ? ($last.Message -split "`r?`n")[0] : $null
+                }
+
+                [pscustomobject]$row
             }
         }
     }
