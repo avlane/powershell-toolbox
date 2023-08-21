@@ -55,6 +55,39 @@ Describe 'Get-PtEventLogSummary' {
         }
     }
 
+    Context 'as a timeline' {
+        BeforeAll {
+            Mock Get-WinEvent -ModuleName PowerShellToolbox {
+                $events = @()
+                foreach ($time in '2021-07-20 08:05:00', '2021-07-20 08:15:00', '2021-07-20 08:50:00') {
+                    $events += [pscustomobject]@{ ProviderName = 'disk'; Id = 153; LevelDisplayName = 'Warning'; TimeCreated = [datetime]$time; Message = 'retried' }
+                }
+                $events += [pscustomobject]@{ ProviderName = 'Kernel-Power'; Id = 41; LevelDisplayName = 'Critical'; TimeCreated = [datetime]'2021-07-20 08:20:00'; Message = 'power' }
+                $events += [pscustomobject]@{ ProviderName = 'Kernel-Power'; Id = 41; LevelDisplayName = 'Critical'; TimeCreated = [datetime]'2021-07-20 10:10:00'; Message = 'power' }
+                $events
+            }
+            $timeline = @(Get-PtEventLogSummary -ComputerName 'SQLPROD01' -BucketMinutes 60)
+        }
+
+        It 'counts events per whole hour, in time order, leaving out empty hours' {
+            $timeline.Count | Should -Be 2
+            $timeline[0].Bucket | Should -Be ([datetime]'2021-07-20 08:00:00')
+            $timeline[0].Count | Should -Be 4
+            $timeline[1].Bucket | Should -Be ([datetime]'2021-07-20 10:00:00')
+            $timeline[1].Count | Should -Be 1
+        }
+
+        It 'names the most frequent event of each bucket' {
+            $timeline[0].TopProvider | Should -Be 'disk'
+            $timeline[0].TopEventId | Should -Be 153
+            $timeline[0].TopCount | Should -Be 3
+        }
+
+        It 'supports other bucket sizes' {
+            @(Get-PtEventLogSummary -ComputerName 'SQLPROD01' -BucketMinutes 30).Count | Should -Be 3
+        }
+    }
+
     Context 'a log without matching events' {
         BeforeAll {
             Mock Get-WinEvent -ModuleName PowerShellToolbox {

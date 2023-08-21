@@ -23,6 +23,12 @@ function Get-PtEventLogSummary {
     .PARAMETER Top
     How many groups to return per computer. Default 10.
 
+    .PARAMETER BucketMinutes
+    Instead of the groups, return a timeline: the events are counted in buckets of
+    this many minutes (aligned to the clock, so 60 gives whole hours), with the most
+    frequent provider and event id of each bucket. A burst of errors shows up as a
+    tall bucket. Buckets without events are not listed.
+
     .EXAMPLE
     Get-PtEventLogSummary -ComputerName SQLPROD01 -LogName Application -Hours 6 -Level Error, Warning
     #>
@@ -40,7 +46,10 @@ function Get-PtEventLogSummary {
         [string[]]$Level = @('Critical', 'Error'),
 
         [ValidateRange(1, 1000)]
-        [int]$Top = 10
+        [int]$Top = 10,
+
+        [ValidateRange(1, 1440)]
+        [int]$BucketMinutes
     )
 
     begin {
@@ -63,6 +72,23 @@ function Get-PtEventLogSummary {
                     continue
                 }
                 Write-Warning "Could not read the $LogName log on $computer : $($_.Exception.Message)"
+                continue
+            }
+
+            if ($BucketMinutes) {
+                $span = [timespan]::FromMinutes($BucketMinutes).Ticks
+                $buckets = $events | Group-Object -Property { [datetime]::new($_.TimeCreated.Ticks - ($_.TimeCreated.Ticks % $span), $_.TimeCreated.Kind) } | Sort-Object -Property Name
+                foreach ($bucket in $buckets) {
+                    $top = $bucket.Group | Group-Object -Property ProviderName, Id | Sort-Object -Property Count -Descending | Select-Object -First 1
+                    [pscustomobject]@{
+                        ComputerName = $computer
+                        Bucket       = [datetime]::new($bucket.Group[0].TimeCreated.Ticks - ($bucket.Group[0].TimeCreated.Ticks % $span), $bucket.Group[0].TimeCreated.Kind)
+                        Count        = $bucket.Count
+                        TopProvider  = $top.Group[0].ProviderName
+                        TopEventId   = $top.Group[0].Id
+                        TopCount     = $top.Count
+                    }
+                }
                 continue
             }
 
