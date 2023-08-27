@@ -77,7 +77,9 @@ function Get-PtEventLogSummary {
 
             if ($BucketMinutes) {
                 $span = [timespan]::FromMinutes($BucketMinutes).Ticks
-                $buckets = $events | Group-Object -Property { [datetime]::new($_.TimeCreated.Ticks - ($_.TimeCreated.Ticks % $span), $_.TimeCreated.Kind) } | Sort-Object -Property Name
+                # the group names are formatted dates and do not sort as dates, so sort on the ticks
+                $bucketStart = { $_.TimeCreated.Ticks - ($_.TimeCreated.Ticks % $span) }
+                $buckets = $events | Group-Object -Property $bucketStart | Sort-Object -Property { [long]$_.Group[0].TimeCreated.Ticks - ([long]$_.Group[0].TimeCreated.Ticks % $span) }
                 foreach ($bucket in $buckets) {
                     $top = $bucket.Group | Group-Object -Property ProviderName, Id | Sort-Object -Property Count -Descending | Select-Object -First 1
                     [pscustomobject]@{
