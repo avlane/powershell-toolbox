@@ -11,6 +11,7 @@
         'Add-PtJiraComment',
         'Add-PtJiraWorklog',
         'Compress-PtOldFile',
+        'ConvertTo-PtMarkdownTable',
         'Connect-PtJira',
         'Copy-PtFileSafe',
         'Export-PtReport',
