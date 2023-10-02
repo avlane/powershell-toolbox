@@ -1,11 +1,11 @@
 function Export-PtReport {
     <#
     .SYNOPSIS
-    Writes the objects from the pipeline to a CSV, JSON or HTML file.
+    Writes the objects from the pipeline to a CSV, JSON, HTML or Markdown file.
 
     .DESCRIPTION
     A small report writer for the other commands in this module. The format follows
-    the file extension (.csv, .json, .html or .htm) unless -Format is given. The
+    the file extension (.csv, .json, .html, .htm or .md) unless -Format is given. The
     HTML output is one styled table in which every value is HTML-encoded, so text
     that comes from a server cannot inject markup. If the objects have a Status or
     Verdict property (as the reports in this module do), the row is coloured red,
@@ -21,7 +21,7 @@ function Export-PtReport {
     The file to write. An existing file is overwritten.
 
     .PARAMETER Format
-    Csv, Json or Html. Default: from the extension of Path.
+    Csv, Json, Html or Markdown. Default: from the extension of Path.
 
     .PARAMETER Title
     The heading of the HTML report.
@@ -54,7 +54,7 @@ function Export-PtReport {
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Path,
 
-        [ValidateSet('Csv', 'Json', 'Html')]
+        [ValidateSet('Csv', 'Json', 'Html', 'Markdown')]
         [string]$Format,
 
         [string]$Title = 'Report',
@@ -86,7 +86,8 @@ function Export-PtReport {
                 '.json' { $Format = 'Json' }
                 '.html' { $Format = 'Html' }
                 '.htm'  { $Format = 'Html' }
-                default { throw "Cannot tell the format from the extension of $Path. Use -Format Csv, Json or Html." }
+                '.md'   { $Format = 'Markdown' }
+                default { throw "Cannot tell the format from the extension of $Path. Use -Format Csv, Json, Html or Markdown." }
             }
         }
 
@@ -103,6 +104,10 @@ function Export-PtReport {
                 }
                 'Json' {
                     ConvertTo-Json -InputObject $items.ToArray() -Depth $JsonDepth -Compress:$Compress | Set-Content -LiteralPath $Path -Encoding $Encoding
+                }
+                'Markdown' {
+                    $table = $items | ConvertTo-PtMarkdownTable
+                    Set-Content -LiteralPath $Path -Value ("# $Title" + [Environment]::NewLine + [Environment]::NewLine + $table) -Encoding $Encoding
                 }
                 'Html' {
                     $encode = { param($text) [System.Net.WebUtility]::HtmlEncode([string]$text) }
