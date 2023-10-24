@@ -49,7 +49,8 @@
         'Rename-PtFileBulk',
         'Restart-PtFailedService',
         'Search-PtJiraIssue',
-        'Set-PtSecret'
+        'Set-PtSecret',
+        'Test-PtTlsCertificate'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()
