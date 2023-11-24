@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0 - 2023-11
+
+- New: `Get-PtBackupChain`, `Get-PtSqlServerInfo`, `Get-PtAzVmInventory`,
+  `Get-PtAzSqlInventory`, `Test-PtTlsCertificate`, `New-PtJql`,
+  `ConvertTo-PtMarkdownTable`.
+- `Export-PtReport` writes Markdown.
+- `Invoke-PtRestRetry` adds jitter to its back-off (`-NoJitter`); `Invoke-PtRestPaged`
+  pages by offset or page number.
+- `Get-PtServiceTriage -IncludeLastEvent`; `Get-PtEventLogSummary -BucketMinutes`
+  (timeline); `Remove-PtOldFile -Recycle`.
+- Fixed: `Get-PtAzSqlInventory` threw on a server whose minimum TLS version is `None`.
+- CI uses `actions/checkout@v4`; Dependabot keeps the actions current.
+
 ## 1.1.0 - 2022-12
 
 - New: `Find-PtJiraUser`, `New-PtJiraIssue`, `Add-PtJiraWorklog`, `Rename-PtFileBulk`.

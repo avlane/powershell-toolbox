@@ -7,7 +7,7 @@ Azure inventory and a safe old-file cleaner.
 
 ## Requirements
 
-- PowerShell 7.2 or later on Windows (the commands use CIM, the event log, the
+- PowerShell 7.2 or later (7.2 and 7.4 are the long-term support releases) on Windows (the commands use CIM, the event log, the
   certificate provider and similar Windows features). Remote CIM queries need WinRM
   on the target computers. Version 0.3.0 was the last to support Windows PowerShell 5.1.
 - For the SQL commands: the `SqlServer` module (`Install-Module SqlServer`).
@@ -44,6 +44,7 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Restart-PtFailedService` | start such services through CIM and wait for them (`-WhatIf` aware) |
 | `Get-PtEventLogSummary` | errors and warnings grouped by provider and event id |
 | `Get-PtCertificateExpiry` | certificates in a store with days until expiry |
+| `Test-PtTlsCertificate` | the certificate a TLS endpoint presents (any host and port) |
 | `Get-PtScheduledTaskReport` | scheduled tasks with last result and a status (Failed, Overdue, ...) |
 | `Register-PtMaintenanceTask` | create a daily/weekly scheduled task for a script |
 | **SQL Server** | |
@@ -52,6 +53,8 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Get-PtRestoreStatus` | running restores and restore history |
 | `Get-PtAgentJobReport` | Agent jobs: last result, next run, recent failures, failed step |
 | `Get-PtDatabaseSpace` | file sizes, growth settings, volume free space |
+| `Get-PtBackupChain` | do the log backups since the last full backup form an unbroken chain? |
+| `Get-PtSqlServerInfo` | version, uptime, memory, MAXDOP, tempdb files, with default-setting flags |
 | `Get-PtBlockingSession` | blocked requests, chains and head blockers |
 | `Get-PtLongRunningQuery` | user requests that have run for a while |
 | **Files** | |
@@ -67,10 +70,13 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `New-PtJiraIssue`, `Add-PtJiraComment`, `Add-PtJiraWorklog` | create issues, comment, log time |
 | `Get-PtJiraTransition`, `Invoke-PtJiraTransition` | move issues through the workflow |
 | `Find-PtJiraUser` | find account ids by name or e-mail |
+| `New-PtJql` | build JQL from parameters, values quoted properly |
 | **Azure, secrets and output** | |
 | `Get-PtAzureInventory` | resources and tags per subscription (Az), missing required tags |
+| `Get-PtAzVmInventory`, `Get-PtAzSqlInventory` | VMs with power state; SQL servers and databases with security flags |
 | `Initialize-PtVault`, `Set-PtSecret`, `Get-PtSecret` | SecretManagement / SecretStore helpers |
-| `Export-PtReport` | write objects to CSV, JSON or HTML |
+| `Export-PtReport` | write objects to CSV, JSON, HTML or Markdown |
+| `ConvertTo-PtMarkdownTable` | objects as a Markdown table for comments and chat |
 | `Format-PtStatusSummary` | "OK: 12, Low: 2, Failed: 1" for any report |
 
 ## Tests
