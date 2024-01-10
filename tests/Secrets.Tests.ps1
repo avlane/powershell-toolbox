@@ -10,12 +10,14 @@ BeforeAll {
     function global:Set-Secret { param($Name, $Secret, $Vault) }
     function global:Get-SecretVault { param($Name) }
     function global:Register-SecretVault { param($Name, $ModuleName, [switch]$DefaultVault) }
+    function global:Get-SecretInfo { param($Name, $Vault) }
+    function global:Remove-Secret { param($Name, $Vault) }
 
     Import-Module $manifest -Force
 }
 
 AfterAll {
-    Remove-Item -Path Function:\global:Get-Secret, Function:\global:Set-Secret, Function:\global:Get-SecretVault, Function:\global:Register-SecretVault -ErrorAction SilentlyContinue
+    Remove-Item -Path Function:\global:Get-Secret, Function:\global:Set-Secret, Function:\global:Get-SecretVault, Function:\global:Register-SecretVault, Function:\global:Get-SecretInfo, Function:\global:Remove-Secret -ErrorAction SilentlyContinue
 }
 
 Describe 'Get-PtSecret and Set-PtSecret' {
@@ -45,6 +47,40 @@ Describe 'Get-PtSecret and Set-PtSecret' {
     It 'does not store anything with -WhatIf' {
         Set-PtSecret -Name 'jira' -Credential $credential -WhatIf
         Should -Invoke Set-Secret -ModuleName PowerShellToolbox -Times 0 -Exactly
+    }
+}
+
+Describe 'Get-PtSecretInfo and Remove-PtSecret' {
+    It 'lists names and types, never values' {
+        Mock Get-SecretInfo -ModuleName PowerShellToolbox {
+            @(
+                [pscustomobject]@{ Name = 'jira-api-token'; Type = 'PSCredential'; VaultName = 'PowerShellToolbox'; Metadata = @{} },
+                [pscustomobject]@{ Name = 'azure-sp'; Type = 'SecureString'; VaultName = 'PowerShellToolbox'; Metadata = @{} }
+            )
+        }
+        $info = @(Get-PtSecretInfo)
+        $info.Name -join ',' | Should -Be 'jira-api-token,azure-sp'
+        $info[0].Type | Should -Be 'PSCredential'
+        $info[0].PSObject.Properties.Name | Should -Not -Contain 'Secret'
+        Should -Invoke Get-SecretInfo -ModuleName PowerShellToolbox -ParameterFilter { $Name -eq '*' -and $Vault -eq 'PowerShellToolbox' }
+    }
+
+    It 'deletes a secret after confirmation' {
+        Mock Remove-Secret -ModuleName PowerShellToolbox { }
+        Remove-PtSecret -Name 'old-token' -Confirm:$false
+        Should -Invoke Remove-Secret -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Name -eq 'old-token' -and $Vault -eq 'PowerShellToolbox' }
+    }
+
+    It 'deletes nothing with -WhatIf' {
+        Mock Remove-Secret -ModuleName PowerShellToolbox { }
+        Remove-PtSecret -Name 'old-token' -WhatIf
+        Should -Invoke Remove-Secret -ModuleName PowerShellToolbox -Times 0 -Exactly
+    }
+
+    It 'takes names from Get-PtSecretInfo' {
+        Mock Remove-Secret -ModuleName PowerShellToolbox { }
+        [pscustomobject]@{ Name = 'a'; VaultName = 'Other' } | Remove-PtSecret -Confirm:$false
+        Should -Invoke Remove-Secret -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Name -eq 'a' -and $Vault -eq 'Other' }
     }
 }
 
