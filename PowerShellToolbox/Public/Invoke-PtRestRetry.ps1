@@ -27,6 +27,10 @@ function Invoke-PtRestRetry {
     .PARAMETER Body
     The request body. A hashtable or object is sent as JSON; a string is sent as is.
 
+    .PARAMETER Form
+    A hashtable for a multipart/form-data upload, for example @{ file = Get-Item .\x.pdf }.
+    FileInfo values are sent as files. Cannot be combined with -Body.
+
     .PARAMETER MaxRetries
     How many times to retry after the first attempt. Default 3.
 
@@ -61,6 +65,8 @@ function Invoke-PtRestRetry {
 
         [object]$Body,
 
+        [hashtable]$Form,
+
         [ValidateRange(0, 20)]
         [int]$MaxRetries = 3,
 
@@ -87,6 +93,11 @@ function Invoke-PtRestRetry {
             $parameters['Body'] = ConvertTo-Json -InputObject $Body -Depth 10
             $parameters['ContentType'] = 'application/json'
         }
+    }
+
+    if ($Form) {
+        if ($null -ne $Body) { throw 'Use either -Body or -Form, not both.' }
+        $parameters['Form'] = $Form
     }
 
     $command = 'Invoke-RestMethod'

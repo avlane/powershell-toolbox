@@ -8,6 +8,7 @@
     PowerShellVersion = '7.2'
     CompatiblePSEditions = @('Core')
     FunctionsToExport = @(
+        'Add-PtJiraAttachment',
         'Add-PtJiraComment',
         'Add-PtJiraWorklog',
         'Compress-PtOldFile',

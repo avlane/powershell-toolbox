@@ -20,6 +20,12 @@ function Invoke-PtJiraRequest {
     .PARAMETER Body
     A hashtable or object that is sent as JSON.
 
+    .PARAMETER Form
+    A hashtable for a multipart/form-data upload (attachments).
+
+    .PARAMETER Headers
+    Extra request headers; they are added to the authentication headers.
+
     .EXAMPLE
     Invoke-PtJiraRequest -Path /rest/api/3/issue/ABC-1 -Query @{ fields = 'summary,status' }
     #>
@@ -34,7 +40,11 @@ function Invoke-PtJiraRequest {
 
         [hashtable]$Query,
 
-        [object]$Body
+        [object]$Body,
+
+        [hashtable]$Form,
+
+        [hashtable]$Headers
     )
 
     if (-not $script:PtJira) {
@@ -49,8 +59,12 @@ function Invoke-PtJiraRequest {
         $uri = $uri + '?' + ($pairs -join '&')
     }
 
-    $parameters = @{ Uri = $uri; Method = $Method; Headers = $script:PtJira.Headers }
+    $allHeaders = $script:PtJira.Headers.Clone()
+    foreach ($key in @($Headers.Keys)) { $allHeaders[$key] = $Headers[$key] }
+
+    $parameters = @{ Uri = $uri; Method = $Method; Headers = $allHeaders }
     if ($null -ne $Body) { $parameters['Body'] = $Body }
+    if ($Form) { $parameters['Form'] = $Form }
 
     Invoke-PtRestRetry @parameters
 }
