@@ -60,7 +60,9 @@ function Invoke-PtJiraRequest {
     }
 
     $allHeaders = $script:PtJira.Headers.Clone()
-    foreach ($key in @($Headers.Keys)) { $allHeaders[$key] = $Headers[$key] }
+    if ($Headers) {
+        foreach ($key in @($Headers.Keys)) { $allHeaders[$key] = $Headers[$key] }
+    }
 
     $parameters = @{ Uri = $uri; Method = $Method; Headers = $allHeaders }
     if ($null -ne $Body) { $parameters['Body'] = $Body }

@@ -83,6 +83,19 @@ Describe 'Invoke-PtJiraRequest' {
         }
     }
 
+    It 'adds extra headers to the authentication headers' {
+        Invoke-PtJiraRequest -Path '/rest/api/3/issue/OPS-1/attachments' -Method Post -Form @{ file = 'x' } -Headers @{ 'X-Atlassian-Token' = 'no-check' } | Out-Null
+        Should -Invoke Invoke-PtRestRetry -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
+            $Headers['X-Atlassian-Token'] -eq 'no-check' -and $Headers.ContainsKey('Authorization') -and $Form.file -eq 'x'
+        }
+    }
+
+    It 'leaves the stored headers alone when it adds some' {
+        Invoke-PtJiraRequest -Path '/x' -Headers @{ 'X-Extra' = '1' } | Out-Null
+        Invoke-PtJiraRequest -Path '/x' | Out-Null
+        Should -Invoke Invoke-PtRestRetry -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { -not $Headers.ContainsKey('X-Extra') }
+    }
+
     It 'passes the method and body on' {
         Invoke-PtJiraRequest -Path '/rest/api/3/issue/OPS-1/comment' -Method Post -Body @{ a = 1 } | Out-Null
         Should -Invoke Invoke-PtRestRetry -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Method -eq 'Post' -and $Body.a -eq 1 }
@@ -371,5 +384,49 @@ Describe 'New-PtJql' {
 
     It 'rejects an order-by field that could carry more JQL' {
         { New-PtJql -OrderBy 'updated; DROP' } | Should -Throw
+    }
+}
+
+Describe 'Add-PtJiraAttachment' {
+    BeforeEach {
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox {
+            [pscustomobject]@{ id = '20001'; filename = 'report.html'; size = 2048; mimeType = 'text/html' }
+        }
+        $file = Join-Path $TestDrive 'report.html'
+        Set-Content -LiteralPath $file -Value '<html></html>'
+    }
+
+    It 'uploads the file with the header Jira requires' {
+        $result = Add-PtJiraAttachment -Key OPS-1 -Path $file -Confirm:$false
+        $result.AttachmentId | Should -Be '20001'
+        $result.SizeKB | Should -Be 2
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
+            $Method -eq 'Post' -and $Path -eq '/rest/api/3/issue/OPS-1/attachments' -and
+            $Headers['X-Atlassian-Token'] -eq 'no-check' -and $Form.file.Name -eq 'report.html'
+        }
+    }
+
+    It 'takes files from the pipeline' {
+        Get-Item -LiteralPath $file | Add-PtJiraAttachment -Key OPS-1 -Confirm:$false | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 1 -Exactly
+    }
+
+    It 'refuses a file that is too large, empty or missing' {
+        $big = Join-Path $TestDrive 'big.bin'
+        $stream = [System.IO.File]::Create($big)
+        $stream.SetLength(2MB)
+        $stream.Dispose()
+        $empty = Join-Path $TestDrive 'empty.txt'
+        New-Item -ItemType File -Path $empty | Out-Null
+
+        { Add-PtJiraAttachment -Key OPS-1 -Path $big -MaxSizeMB 1 -Confirm:$false -ErrorAction Stop } | Should -Throw '*more than the limit*'
+        { Add-PtJiraAttachment -Key OPS-1 -Path $empty -Confirm:$false -ErrorAction Stop } | Should -Throw '*empty*'
+        { Add-PtJiraAttachment -Key OPS-1 -Path (Join-Path $TestDrive 'nope.txt') -Confirm:$false -ErrorAction Stop } | Should -Throw '*does not exist*'
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 0 -Exactly
+    }
+
+    It 'uploads nothing with -WhatIf' {
+        Add-PtJiraAttachment -Key OPS-1 -Path $file -WhatIf
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 0 -Exactly
     }
 }
