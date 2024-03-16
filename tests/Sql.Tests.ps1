@@ -198,9 +198,9 @@ Describe 'Get-PtAgentJobReport' {
     BeforeAll {
         Mock Invoke-PtSqlQuery -ModuleName PowerShellToolbox {
             @(
-                [pscustomobject]@{ JobName = 'Backup full'; Enabled = 1; LastRunStatus = 1; LastRunTime = $null; LastRunSeconds = 300; LastMessage = 'ok'; NextRunTime = $null; FailedRuns = 0 },
-                [pscustomobject]@{ JobName = 'Index maintenance'; Enabled = 1; LastRunStatus = 0; LastRunTime = $null; LastRunSeconds = 10; LastMessage = 'failed'; NextRunTime = $null; FailedRuns = 2 },
-                [pscustomobject]@{ JobName = 'Cleanup'; Enabled = 1; LastRunStatus = 1; LastRunTime = $null; LastRunSeconds = 5; LastMessage = 'ok'; NextRunTime = $null; FailedRuns = 1 },
+                [pscustomobject]@{ JobName = 'Backup full'; Category = 'Database Maintenance'; Enabled = 1; LastRunStatus = 1; LastRunTime = $null; LastRunSeconds = 300; LastMessage = 'ok'; NextRunTime = $null; FailedRuns = 0 },
+                [pscustomobject]@{ JobName = 'Index maintenance'; Category = 'Database Maintenance'; Enabled = 1; LastRunStatus = 0; LastRunTime = $null; LastRunSeconds = 10; LastMessage = 'failed'; NextRunTime = $null; FailedRuns = 2 },
+                [pscustomobject]@{ JobName = 'Cleanup'; Category = 'Housekeeping'; Enabled = 1; LastRunStatus = 1; LastRunTime = $null; LastRunSeconds = 5; LastMessage = 'ok'; NextRunTime = $null; FailedRuns = 1 },
                 [pscustomobject]@{ JobName = 'Old job'; Enabled = 0; LastRunStatus = 0; LastRunTime = $null; LastRunSeconds = 5; LastMessage = 'x'; NextRunTime = $null; FailedRuns = 0 },
                 [pscustomobject]@{ JobName = 'Brand new'; Enabled = 1; LastRunStatus = $null; LastRunTime = $null; LastRunSeconds = $null; LastMessage = $null; NextRunTime = $null; FailedRuns = 0 }
             )
@@ -220,6 +220,12 @@ Describe 'Get-PtAgentJobReport' {
         $report = @(Get-PtAgentJobReport -ServerInstance 'SQLPROD01' -OnlyProblems)
         $report.Count | Should -Be 3
         $report.JobName | Should -Not -Contain 'Backup full'
+    }
+
+    It 'filters by job name wildcard and by category' {
+        @(Get-PtAgentJobReport -ServerInstance 'SQLPROD01' -JobName 'Backup*').JobName -join ',' | Should -Be 'Backup full'
+        @(Get-PtAgentJobReport -ServerInstance 'SQLPROD01' -Category 'Housekeeping').JobName -join ',' | Should -Be 'Cleanup'
+        @(Get-PtAgentJobReport -ServerInstance 'SQLPROD01' -Category 'Database Maintenance').Count | Should -Be 2
     }
 
     It 'adds the failed step and its message with -IncludeStepDetail' {

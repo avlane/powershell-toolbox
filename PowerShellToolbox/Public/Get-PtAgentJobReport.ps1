@@ -13,6 +13,12 @@ function Get-PtAgentJobReport {
     .PARAMETER ServerInstance
     One or more instances.
 
+    .PARAMETER JobName
+    Only jobs whose name matches this wildcard, for example 'Backup*'.
+
+    .PARAMETER Category
+    Only jobs in this job category, for example 'Database Maintenance'.
+
     .PARAMETER Hours
     The window for counting failed runs. Default 24.
 
@@ -34,6 +40,10 @@ function Get-PtAgentJobReport {
     param(
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
         [string[]]$ServerInstance,
+
+        [string]$JobName = '*',
+
+        [string]$Category,
 
         [ValidateRange(1, 8760)]
         [int]$Hours = 24,
@@ -70,6 +80,7 @@ next_run AS (
     GROUP BY job_id
 )
 SELECT j.name AS JobName,
+       c.name AS Category,
        j.enabled AS Enabled,
        l.run_status AS LastRunStatus,
        msdb.dbo.agent_datetime(l.run_date, l.run_time) AS LastRunTime,
@@ -78,6 +89,7 @@ SELECT j.name AS JobName,
        n.next_run_time AS NextRunTime,
        ISNULL(f.failed_runs, 0) AS FailedRuns
 FROM msdb.dbo.sysjobs AS j
+LEFT JOIN msdb.dbo.syscategories AS c ON c.category_id = j.category_id
 LEFT JOIN last_run AS l ON l.job_id = j.job_id AND l.rn = 1
 LEFT JOIN failures AS f ON f.job_id = j.job_id
 LEFT JOIN next_run AS n ON n.job_id = j.job_id
@@ -112,6 +124,9 @@ CROSS APPLY (
             }
 
             foreach ($row in (Invoke-PtSqlQuery @parameters)) {
+                if ($row.JobName -notlike $JobName) { continue }
+                if ($Category -and $row.Category -ne $Category) { continue }
+
                 $lastStatus = 'NeverRun'
                 if ($null -ne $row.LastRunStatus) { $lastStatus = $statusNames[[int]$row.LastRunStatus] }
 
@@ -125,6 +140,7 @@ CROSS APPLY (
                 $output = [ordered]@{
                     ServerInstance = $server
                     JobName        = $row.JobName
+                    Category       = $row.Category
                     Enabled        = [bool]$row.Enabled
                     LastRunStatus  = $lastStatus
                     LastRunTime    = $row.LastRunTime
