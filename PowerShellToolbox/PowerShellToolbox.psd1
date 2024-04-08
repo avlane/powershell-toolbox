@@ -26,6 +26,7 @@
         'Get-PtBackupChain',
         'Get-PtBlockingSession',
         'Get-PtCertificateExpiry',
+        'Get-PtDatabaseGrowth',
         'Get-PtDatabaseSpace',
         'Get-PtDiskReport',
         'Get-PtEventLogSummary',
