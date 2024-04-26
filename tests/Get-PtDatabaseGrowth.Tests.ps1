@@ -13,7 +13,7 @@ Describe 'Get-PtLinearSlope' {
 
     It 'fits a line through noisy points' {
         $slope = InModuleScope PowerShellToolbox { Get-PtLinearSlope -X 0, 1, 2, 3, 4 -Y 0, 1, 1, 2, 2 }
-        [math]::Round($slope, 3) | Should -Be 0.6
+        [math]::Round($slope, 3) | Should -Be 0.5
     }
 
     It 'is zero for a flat series and negative for a shrinking one' {
