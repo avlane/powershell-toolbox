@@ -71,6 +71,36 @@ Describe 'Get-PtDiskReport' {
         }
     }
 
+    Context 'volumes mounted in folders' {
+        BeforeAll {
+            Mock Get-CimInstance -ModuleName PowerShellToolbox -ParameterFilter { $ClassName -eq 'Win32_LogicalDisk' } {
+                [pscustomobject]@{ DeviceID = 'C:'; VolumeName = 'OS'; Size = 100GB; FreeSpace = 50GB }
+            }
+            Mock Get-CimInstance -ModuleName PowerShellToolbox -ParameterFilter { $ClassName -eq 'Win32_Volume' } {
+                @(
+                    [pscustomobject]@{ Name = 'E:\SQLData\'; Label = 'Data'; Capacity = 500GB; FreeSpace = 20GB },
+                    [pscustomobject]@{ Name = '\\?\Volume{0a1b2c3d-0000-0000-0000-100000000000}\'; Label = 'Recovery'; Capacity = 1GB; FreeSpace = 0.1GB }
+                )
+            }
+        }
+
+        It 'does not look for them unless asked to' {
+            $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01' -ThrottleLimit 1)
+            $report.Count | Should -Be 1
+            Should -Invoke Get-CimInstance -ModuleName PowerShellToolbox -Times 0 -Exactly -ParameterFilter { $ClassName -eq 'Win32_Volume' }
+        }
+
+        It 'adds mount points, with the folder as the drive, and skips volumes that are not mounted anywhere' {
+            $report = @(Get-PtDiskReport -ComputerName 'SQLPROD01' -ThrottleLimit 1 -IncludeMountPoints)
+            $report.Count | Should -Be 2
+            $mount = $report | Where-Object Drive -eq 'E:\SQLData\'
+            $mount.Label | Should -Be 'Data'
+            $mount.SizeGB | Should -Be 500
+            $mount.Status | Should -Be 'Low'
+            $mount.FreePercent | Should -Be 4
+        }
+    }
+
     Context 'a computer that cannot be reached' {
         BeforeAll {
             Mock Get-CimInstance -ModuleName PowerShellToolbox { throw 'WinRM cannot process the request' }

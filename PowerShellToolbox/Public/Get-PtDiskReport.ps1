@@ -17,6 +17,11 @@ function Get-PtDiskReport {
     .PARAMETER WarningPercent
     A disk with less than this percentage free is reported as Low. Default 10.
 
+    .PARAMETER IncludeMountPoints
+    Also list volumes that are mounted in a folder instead of getting a drive letter,
+    which Win32_LogicalDisk does not show. Database servers often keep their data
+    and log volumes that way. Their Drive column holds the folder path.
+
     .PARAMETER ThrottleLimit
     How many computers to query at the same time. Default 5.
     1 means one at a time.
@@ -39,6 +44,8 @@ function Get-PtDiskReport {
         [ValidateRange(1, 99)]
         [int]$WarningPercent = 10,
 
+        [switch]$IncludeMountPoints,
+
         [ValidateRange(1, 64)]
         [int]$ThrottleLimit = 5
     )
@@ -60,6 +67,11 @@ function Get-PtDiskReport {
                 $target = $_    # inside catch, $_ is the error record
                 try {
                     $disks = @(Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType = 3' -ComputerName $target -ErrorAction Stop)
+                    if ($using:IncludeMountPoints) {
+                        $disks += @(Get-CimInstance -ClassName Win32_Volume -Filter 'DriveType = 3 AND DriveLetter = NULL' -ComputerName $target -ErrorAction Stop |
+                                Where-Object { $_.Name -notlike '\\?\Volume*' } |
+                                ForEach-Object { [pscustomobject]@{ DeviceID = $_.Name; VolumeName = $_.Label; Size = $_.Capacity; FreeSpace = $_.FreeSpace } })
+                    }
                     [pscustomobject]@{ Computer = $target; Disks = $disks; Error = $null }
                 }
                 catch {
@@ -71,6 +83,11 @@ function Get-PtDiskReport {
             $fetched = foreach ($computer in $computers) {
                 try {
                     $disks = @(Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType = 3' -ComputerName $computer -ErrorAction Stop)
+                    if ($IncludeMountPoints) {
+                        $disks += @(Get-CimInstance -ClassName Win32_Volume -Filter 'DriveType = 3 AND DriveLetter = NULL' -ComputerName $computer -ErrorAction Stop |
+                                Where-Object { $_.Name -notlike '\\?\Volume*' } |
+                                ForEach-Object { [pscustomobject]@{ DeviceID = $_.Name; VolumeName = $_.Label; Size = $_.Capacity; FreeSpace = $_.FreeSpace } })
+                    }
                     [pscustomobject]@{ Computer = $computer; Disks = $disks; Error = $null }
                 }
                 catch {
