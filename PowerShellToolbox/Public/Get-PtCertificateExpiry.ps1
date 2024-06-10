@@ -5,7 +5,8 @@ function Get-PtCertificateExpiry {
 
     .DESCRIPTION
     Reads Cert:\<StoreLocation>\<StoreName> on each computer (remote computers
-    are reached with Invoke-Command, so PowerShell remoting must be enabled) and
+    are reached with one Invoke-Command call that talks to several of them at a time,
+    so PowerShell remoting must be enabled) and
     returns one object per certificate, oldest expiry first. Status is Expired,
     Expiring (within WarningDays) or OK.
 
@@ -30,6 +31,9 @@ function Get-PtCertificateExpiry {
     .PARAMETER OnlyProblems
     Leave out certificates whose Status is OK.
 
+    .PARAMETER ThrottleLimit
+    How many remote computers Invoke-Command talks to at the same time. Default 32.
+
     .EXAMPLE
     Get-PtCertificateExpiry -ComputerName WEB01, WEB02 | Where-Object Status -ne 'OK'
     #>
@@ -50,7 +54,10 @@ function Get-PtCertificateExpiry {
 
         [string[]]$ExcludeThumbprint,
 
-        [switch]$OnlyProblems
+        [switch]$OnlyProblems,
+
+        [ValidateRange(1, 256)]
+        [int]$ThrottleLimit = 32
     )
 
     begin {
@@ -68,24 +75,40 @@ function Get-PtCertificateExpiry {
             }
         }
         $localNames = @($env:COMPUTERNAME, 'localhost', '.')
+        $requested = New-Object -TypeName 'System.Collections.Generic.List[string]'
     }
 
     process {
-        foreach ($computer in $ComputerName) {
+        foreach ($computer in $ComputerName) { $requested.Add($computer) }
+    }
+
+    end {
+        $entries = New-Object -TypeName 'System.Collections.Generic.List[object]'
+
+        $remote = @($requested | Where-Object { $localNames -notcontains $_ } | Select-Object -Unique)
+        foreach ($computer in @($requested | Where-Object { $localNames -contains $_ } | Select-Object -Unique)) {
             try {
-                if ($localNames -contains $computer) {
-                    $certificates = @(& $readStore $StoreLocation $StoreName)
-                }
-                else {
-                    $certificates = @(Invoke-Command -ComputerName $computer -ScriptBlock $readStore -ArgumentList $StoreLocation, $StoreName -ErrorAction Stop)
-                }
+                foreach ($certificate in @(& $readStore $StoreLocation $StoreName)) { $entries.Add([pscustomobject]@{ Computer = $computer; Certificate = $certificate }) }
             }
             catch {
                 Write-Warning "Could not read the $StoreLocation\$StoreName store on $computer : $($_.Exception.Message)"
-                continue
             }
+        }
 
-            foreach ($certificate in ($certificates | Sort-Object -Property NotAfter)) {
+        if ($remote.Count -gt 0) {
+            # one call for all remote computers, run side by side; computers that fail
+            # come back as errors, not as results
+            $remoteErrors = @()
+            $remoteResults = @(Invoke-Command -ComputerName $remote -ScriptBlock $readStore -ArgumentList $StoreLocation, $StoreName -ThrottleLimit $ThrottleLimit -ErrorAction SilentlyContinue -ErrorVariable remoteErrors)
+            foreach ($certificate in $remoteResults) { $entries.Add([pscustomobject]@{ Computer = [string]$certificate.PSComputerName; Certificate = $certificate }) }
+            foreach ($failure in $remoteErrors) {
+                $name = $failure.TargetObject ?? $failure.OriginInfo.PSComputerName
+                Write-Warning "Could not read the $StoreLocation\$StoreName store on $name : $($failure.Exception.Message)"
+            }
+        }
+
+        foreach ($computer in ($entries | Select-Object -ExpandProperty Computer -Unique)) {
+            foreach ($certificate in (($entries | Where-Object { $_.Computer -eq $computer }).Certificate | Sort-Object -Property NotAfter)) {
                 if ($Subject -and $certificate.Subject -notlike $Subject) { continue }
                 if ($ExcludeThumbprint -contains $certificate.Thumbprint) { continue }
 

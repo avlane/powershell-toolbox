@@ -67,20 +67,26 @@ Describe 'Get-PtCertificateExpiry' {
     Context 'a remote computer' {
         It 'uses remoting' {
             Mock Invoke-Command -ModuleName PowerShellToolbox {
-                [pscustomobject]@{ Subject = 'CN=web'; Issuer = 'CN=CA'; Thumbprint = 'DDDD'; NotAfter = (Get-Date).AddDays(100); HasPrivateKey = $true; DnsNames = 'web.example.com' }
+                [pscustomobject]@{ PSComputerName = 'WEB01'; Subject = 'CN=web01'; Issuer = 'CN=CA'; Thumbprint = 'DDDD'; NotAfter = (Get-Date).AddDays(100); HasPrivateKey = $true; DnsNames = 'web.example.com' }
+                [pscustomobject]@{ PSComputerName = 'WEB02'; Subject = 'CN=web02'; Issuer = 'CN=CA'; Thumbprint = 'EEEE'; NotAfter = (Get-Date).AddDays(5); HasPrivateKey = $true; DnsNames = 'web2.example.com' }
             }
-            $report = @(Get-PtCertificateExpiry -ComputerName 'WEB01' -StoreName 'WebHosting')
-            $report.Count | Should -Be 1
-            $report[0].ComputerName | Should -Be 'WEB01'
+            $report = @(Get-PtCertificateExpiry -ComputerName 'WEB01', 'WEB02', 'WEB01' -StoreName 'WebHosting')
+            $report.Count | Should -Be 2
+            ($report | Where-Object ComputerName -eq 'WEB01').Thumbprint | Should -Be 'DDDD'
+            ($report | Where-Object ComputerName -eq 'WEB02').Status | Should -Be 'Expiring'
             Should -Invoke Invoke-Command -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
-                $ComputerName -eq 'WEB01' -and $ArgumentList[1] -eq 'WebHosting'
+                ($ComputerName -join ',') -eq 'WEB01,WEB02' -and $ArgumentList[1] -eq 'WebHosting' -and $ThrottleLimit -eq 32
             }
         }
 
-        It 'warns when the computer cannot be reached' {
-            Mock Invoke-Command -ModuleName PowerShellToolbox { throw 'WinRM cannot connect' }
-            $report = Get-PtCertificateExpiry -ComputerName 'DOWN01' -WarningVariable warnings -WarningAction SilentlyContinue
-            $report | Should -BeNullOrEmpty
+        It 'warns about the computers that cannot be reached and still reports the others' {
+            Mock Invoke-Command -ModuleName PowerShellToolbox {
+                Write-Error -Message 'WinRM cannot connect' -TargetObject 'DOWN01'
+                [pscustomobject]@{ PSComputerName = 'WEB01'; Subject = 'CN=web'; Issuer = 'CN=CA'; Thumbprint = 'DDDD'; NotAfter = (Get-Date).AddDays(100); HasPrivateKey = $true; DnsNames = 'web.example.com' }
+            }
+            $report = @(Get-PtCertificateExpiry -ComputerName 'DOWN01', 'WEB01' -WarningVariable warnings -WarningAction SilentlyContinue)
+            $report.Count | Should -Be 1
+            $report[0].ComputerName | Should -Be 'WEB01'
             "$warnings" | Should -Match 'DOWN01'
         }
     }
