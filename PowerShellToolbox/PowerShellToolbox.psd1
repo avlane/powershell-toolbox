@@ -22,6 +22,7 @@
         'Get-PtAgentJobReport',
         'Get-PtAzureInventory',
         'Get-PtAzSqlInventory',
+        'Get-PtAzureTagSummary',
         'Get-PtAzVmInventory',
         'Get-PtBackupStatus',
         'Get-PtBackupChain',

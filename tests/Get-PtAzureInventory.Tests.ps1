@@ -97,3 +97,39 @@ Describe 'Get-PtAzureInventory' {
         }
     }
 }
+
+Describe 'Get-PtAzureTagSummary' {
+    BeforeAll {
+        $inventory = @(
+            [pscustomobject]@{ Name = 'a'; Type = 'Microsoft.Compute/virtualMachines'; Tags = 'CostCenter=4711; Owner=dba' },
+            [pscustomobject]@{ Name = 'b'; Type = 'Microsoft.Compute/disks'; Tags = 'CostCenter=4711' },
+            [pscustomobject]@{ Name = 'c'; Type = 'Microsoft.Compute/disks'; Tags = 'CostCenter=4711; Owner=web' },
+            [pscustomobject]@{ Name = 'd'; Type = 'Microsoft.Web/sites'; Tags = 'CostCenter=0815' },
+            [pscustomobject]@{ Name = 'e'; Type = 'Microsoft.Web/sites'; Tags = '' },
+            [pscustomobject]@{ Name = 'f'; Type = 'Microsoft.Storage/storageAccounts'; Tags = 'Note=a=b' }
+        )
+    }
+
+    It 'counts resources per value, most common first, with the untagged under (missing)' {
+        $summary = @($inventory | Get-PtAzureTagSummary -Tag CostCenter)
+        ($summary | ForEach-Object { "$($_.Value)=$($_.Count)" }) -join ',' | Should -Be '4711=3,(missing)=2,0815=1'
+    }
+
+    It 'lists the most common resource types of a group' {
+        $summary = @($inventory | Get-PtAzureTagSummary -Tag CostCenter)
+        ($summary | Where-Object Value -eq '4711').ResourceTypes | Should -Be 'Microsoft.Compute/disks (2), Microsoft.Compute/virtualMachines (1)'
+    }
+
+    It 'summarises several tags and keeps equals signs inside values' {
+        $summary = @($inventory | Get-PtAzureTagSummary -Tag Owner, Note)
+        @($summary | Where-Object Tag -eq 'Owner').Count | Should -Be 3
+        ($summary | Where-Object { $_.Tag -eq 'Note' -and $_.Value -ne '(missing)' }).Value | Should -Be 'a=b'
+    }
+
+    It 'asks the inventory when nothing is piped in' {
+        Mock Get-PtAzureInventory -ModuleName PowerShellToolbox { [pscustomobject]@{ Name = 'x'; Type = 'T'; Tags = 'Owner=me' } }
+        $summary = @(Get-PtAzureTagSummary -Tag Owner -SubscriptionId '11111111-1111-1111-1111-111111111111')
+        $summary[0].Value | Should -Be 'me'
+        Should -Invoke Get-PtAzureInventory -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $SubscriptionId -eq '11111111-1111-1111-1111-111111111111' }
+    }
+}
