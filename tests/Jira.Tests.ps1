@@ -430,3 +430,85 @@ Describe 'Add-PtJiraAttachment' {
         Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 0 -Exactly
     }
 }
+
+Describe 'ConvertFrom-PtJiraDate' {
+    It 'parses Jira timestamps with the offset written without a colon' -ForEach @(
+        @{ Text = '2024-08-04T10:11:12.345+0000'; Utc = '2024-08-04 10:11:12.345' },
+        @{ Text = '2024-08-04T10:11:12.000+0200'; Utc = '2024-08-04 08:11:12.000' },
+        @{ Text = '2024-08-04T10:11:12.000-0530'; Utc = '2024-08-04 15:41:12.000' },
+        @{ Text = '2024-08-04T10:11:12.345+00:00'; Utc = '2024-08-04 10:11:12.345' }
+    ) {
+        $result = InModuleScope PowerShellToolbox -Parameters @{ Text = $Text } { ConvertFrom-PtJiraDate -Text $Text }
+        $result.UtcDateTime.ToString('yyyy-MM-dd HH:mm:ss.fff') | Should -Be $Utc
+    }
+
+    It 'returns nothing for empty or unreadable text' -ForEach @(
+        @{ Text = $null }, @{ Text = '' }, @{ Text = 'yesterday-ish' }
+    ) {
+        InModuleScope PowerShellToolbox -Parameters @{ Text = $Text } { ConvertFrom-PtJiraDate -Text $Text } | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'ConvertFrom-PtJiraIssue' {
+    It 'copes with missing fields' {
+        $flat = InModuleScope PowerShellToolbox {
+            ConvertFrom-PtJiraIssue -Issue ([pscustomobject]@{ key = 'OPS-9'; fields = [pscustomobject]@{ summary = 'Only a summary' } }) -BaseUri 'https://example.atlassian.net'
+        }
+        $flat.Key | Should -Be 'OPS-9'
+        $flat.Summary | Should -Be 'Only a summary'
+        $flat.Assignee | Should -BeNullOrEmpty
+        $flat.Status | Should -BeNullOrEmpty
+        $flat.Created | Should -BeNullOrEmpty
+        $flat.Url | Should -Be 'https://example.atlassian.net/browse/OPS-9'
+    }
+
+    It 'leaves the address out without a base address' {
+        $flat = InModuleScope PowerShellToolbox {
+            ConvertFrom-PtJiraIssue -Issue ([pscustomobject]@{ key = 'OPS-9'; fields = [pscustomobject]@{ summary = 's' } })
+        }
+        $flat.Url | Should -BeNullOrEmpty
+    }
+
+    It 'flattens several issues from the pipeline' {
+        $keys = InModuleScope PowerShellToolbox {
+            $issues = 1..3 | ForEach-Object { [pscustomobject]@{ key = "OPS-$_"; fields = [pscustomobject]@{ summary = "s$_" } } }
+            ($issues | ConvertFrom-PtJiraIssue).Key -join ','
+        }
+        $keys | Should -Be 'OPS-1,OPS-2,OPS-3'
+    }
+}
+
+Describe 'Get-PtJiraIssue' {
+    BeforeAll {
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox {
+            [pscustomobject]@{
+                key    = 'OPS-5'
+                fields = [pscustomobject]@{
+                    summary     = 'Disk is full'
+                    status      = [pscustomobject]@{ name = 'Open'; statusCategory = [pscustomobject]@{ name = 'To Do' } }
+                    description = [pscustomobject]@{ type = 'doc'; content = @([pscustomobject]@{ type = 'paragraph'; content = @([pscustomobject]@{ type = 'text'; text = 'F: is at 99 percent' }) }) }
+                    labels      = @('disk', 'sql')
+                    comment     = [pscustomobject]@{ comments = @(
+                            [pscustomobject]@{ author = [pscustomobject]@{ displayName = 'Sam'; accountId = 'abc' }; created = '2024-08-01T09:00:00.000+0000'; body = [pscustomobject]@{ type = 'doc'; content = @([pscustomobject]@{ type = 'paragraph'; content = @([pscustomobject]@{ type = 'text'; text = 'On it.' }) }) } }
+                        ) }
+                }
+            }
+        }
+        InModuleScope PowerShellToolbox { $script:PtJira = @{ BaseUri = 'https://example.atlassian.net'; Headers = @{} } }
+    }
+
+    It 'returns the description as plain text and the labels' {
+        $issue = Get-PtJiraIssue OPS-5
+        $issue.Description | Should -Be 'F: is at 99 percent'
+        $issue.Labels -join ',' | Should -Be 'disk,sql'
+        $issue.PSObject.Properties.Name | Should -Not -Contain 'Comments'
+    }
+
+    It 'adds the comments on request, and asks for the comment field' {
+        $issue = Get-PtJiraIssue OPS-5 -IncludeComments
+        $issue.Comments.Count | Should -Be 1
+        $issue.Comments[0].Author | Should -Be 'Sam'
+        $issue.Comments[0].Text | Should -Be 'On it.'
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Query.fields -match 'comment' }
+    }
+}
