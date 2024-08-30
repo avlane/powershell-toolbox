@@ -51,6 +51,18 @@ Describe 'Get-PtStatusSeverity' {
         @{ Word = 'Something else'; Severity = 'neutral' },
         @{ Word = ''; Severity = 'neutral' }
     ) {
-        InModuleScope PowerShellToolbox -Parameters @{ Word = $Word } { Get-PtStatusSeverity -Status $Word } | Should -Be $Severity
+        Get-PtStatusSeverity -Status $Word | Should -Be $Severity
+    }
+}
+
+Describe 'Get-PtStatusSeverity for the newer status words' {
+    It 'knows the words of the later reports' -ForEach @(
+        @{ Word = 'Overdue'; Severity = 'warn' },
+        @{ Word = 'Collision'; Severity = 'warn' },
+        @{ Word = 'Expired'; Severity = 'bad' },
+        @{ Word = 'NotFound'; Severity = 'bad' },
+        @{ Word = 'Compressed'; Severity = 'good' }
+    ) {
+        Get-PtStatusSeverity -Status $Word | Should -Be $Severity
     }
 }

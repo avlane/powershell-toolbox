@@ -3,6 +3,12 @@ function Get-PtStatusSeverity {
     .SYNOPSIS
     Classifies a status word from one of the reports as good, warn, bad or neutral.
 
+    .PARAMETER Status
+    The word, for example OK, Low or Failed.
+
+    .EXAMPLE
+    Get-PtDiskReport | Where-Object { (Get-PtStatusSeverity -Status $_.Status) -in 'warn', 'bad' }
+
     .DESCRIPTION
     The reports in this module use a handful of words (OK, Low, Failed, Stale,
     Expiring ...). This keeps the meaning of those words in one place so that the

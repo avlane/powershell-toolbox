@@ -1,0 +1,10 @@
+{
+  "servers": ["SQLPROD01", "SQLPROD02"],
+  "computers": ["SQLPROD01", "SQLPROD02", "WEB01"],
+  "outputFolder": "D:\\Reports\\daily",
+  "jira": {
+    "baseUri": "https://example.atlassian.net",
+    "issueKey": "OPS-100",
+    "secretName": "jira-api-token"
+  }
+}
