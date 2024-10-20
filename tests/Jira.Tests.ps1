@@ -115,11 +115,11 @@ Describe 'Search-PtJiraIssue' {
         }
         $global:PtTestIssues = @{ OPS1 = (New-FakeIssue 'OPS-1'); OPS2 = (New-FakeIssue 'OPS-2'); OPS3 = (New-FakeIssue 'OPS-3') }
 
-        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Query.startAt -eq 0 } {
-            [pscustomobject]@{ total = 3; issues = @($global:PtTestIssues.OPS1, $global:PtTestIssues.OPS2) }
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { -not $Query.ContainsKey('nextPageToken') } {
+            [pscustomobject]@{ issues = @($global:PtTestIssues.OPS1, $global:PtTestIssues.OPS2); nextPageToken = 'token-two'; isLast = $false }
         }
-        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Query.startAt -eq 2 } {
-            [pscustomobject]@{ total = 3; issues = @($global:PtTestIssues.OPS3) }
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Query.nextPageToken -eq 'token-two' } {
+            [pscustomobject]@{ issues = @($global:PtTestIssues.OPS3); isLast = $true }
         }
         InModuleScope PowerShellToolbox { $script:PtJira = @{ BaseUri = 'https://example.atlassian.net'; Headers = @{} } }
     }
@@ -128,10 +128,22 @@ Describe 'Search-PtJiraIssue' {
         Remove-Variable -Name PtTestIssues -Scope Global -ErrorAction SilentlyContinue
     }
 
-    It 'reads every page' {
+    It 'reads every page by following the page token' {
         $issues = @(Search-PtJiraIssue 'project = OPS' -PageSize 2)
         $issues.Key -join ',' | Should -Be 'OPS-1,OPS-2,OPS-3'
         Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 2 -Exactly
+    }
+
+    It 'uses the enhanced search endpoint and no startAt' {
+        Search-PtJiraIssue 'project = OPS' | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter {
+            $Path -eq '/rest/api/3/search/jql' -and -not $Query.ContainsKey('startAt') -and $Query.jql -eq 'project = OPS'
+        }
+    }
+
+    It 'asks for the fields it flattens' {
+        Search-PtJiraIssue 'project = OPS' | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Query.fields -match 'summary' -and $Query.fields -match 'assignee' }
     }
 
     It 'flattens the issues' {

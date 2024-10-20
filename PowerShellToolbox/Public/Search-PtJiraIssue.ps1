@@ -4,8 +4,11 @@ function Search-PtJiraIssue {
     Finds Jira issues with a JQL query and returns them as flat objects.
 
     .DESCRIPTION
-    Pages through /rest/api/3/search (startAt / maxResults) until all matches are
-    read or -First is reached. Needs Connect-PtJira first. Without -Raw each issue
+    Uses the enhanced search endpoint, /rest/api/3/search/jql, which pages with a
+    token (nextPageToken) instead of startAt and does not report a total. All pages
+    are read until the last one or until -First is reached. Needs Connect-PtJira
+    first. The query must be bounded by at least one search restriction, for example
+    a project: the new endpoint rejects a bare 'ORDER BY created'. Without -Raw each issue
     is flattened to Key, Summary, Type, Status, Priority, Assignee (display name
     and accountId), Reporter, Created, Updated and Url.
 
@@ -44,13 +47,14 @@ function Search-PtJiraIssue {
         [switch]$Raw
     )
 
-    $startAt = 0
+    $pageToken = $null
     $returned = 0
     $baseUri = $script:PtJira.BaseUri
 
     do {
-        $query = @{ jql = $Jql; startAt = $startAt; maxResults = $PageSize; fields = ($Fields -join ',') }
-        $page = Invoke-PtJiraRequest -Path '/rest/api/3/search' -Query $query
+        $query = @{ jql = $Jql; maxResults = $PageSize; fields = ($Fields -join ',') }
+        if ($pageToken) { $query['nextPageToken'] = $pageToken }
+        $page = Invoke-PtJiraRequest -Path '/rest/api/3/search/jql' -Query $query
 
         $issues = @()
         if ($page.issues) { $issues = @($page.issues) }
@@ -61,6 +65,7 @@ function Search-PtJiraIssue {
             if ($Raw) { $issue } else { ConvertFrom-PtJiraIssue -Issue $issue -BaseUri $baseUri }
         }
 
-        $startAt += $issues.Count
-    } while ($issues.Count -gt 0 -and $startAt -lt $page.total)
+        # the last page has no token
+        $pageToken = $page.isLast ? $null : $page.nextPageToken
+    } while ($pageToken)
 }
