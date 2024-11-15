@@ -34,6 +34,10 @@ Search-PtJiraIssue 'project = OPS AND resolution = Unresolved ORDER BY updated D
 Invoke-PtJiraTransition -Key OPS-123 -Transition 'Done' -Comment 'Fixed.' -WhatIf
 ```
 
+`Search-PtJiraIssue` uses Jira Cloud's enhanced search endpoint (`/rest/api/3/search/jql`),
+which needs a bounded query (at least one restriction such as a project) and returns
+no total. `New-PtJql` builds such queries with the values quoted.
+
 Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 
 | command | what it does |
@@ -66,7 +70,8 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Invoke-PtRestRetry` | `Invoke-RestMethod` with retries, back-off and Retry-After |
 | `Invoke-PtRestPaged` | follow a Link header or a next-link property through all pages |
 | `Connect-PtJira`, `Invoke-PtJiraRequest` | sign in with an API token; raw API calls |
-| `Search-PtJiraIssue`, `Get-PtJiraIssue` | JQL search and single issues as flat objects |
+| `Search-PtJiraIssue`, `Get-PtJiraIssue` | JQL search (enhanced search, page tokens) and single issues as flat objects |
+| `Add-PtJiraAttachment` | attach files (multipart upload, size checked first) |
 | `New-PtJiraIssue`, `Add-PtJiraComment`, `Add-PtJiraWorklog` | create issues, comment, log time |
 | `Get-PtJiraTransition`, `Invoke-PtJiraTransition` | move issues through the workflow |
 | `Find-PtJiraUser` | find account ids by name or e-mail |

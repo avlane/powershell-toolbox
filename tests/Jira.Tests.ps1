@@ -77,9 +77,9 @@ Describe 'Invoke-PtJiraRequest' {
     }
 
     It 'sorts and URL-encodes the query string' {
-        Invoke-PtJiraRequest -Path '/rest/api/3/search' -Query @{ maxResults = 50; jql = 'project = OPS' } | Out-Null
+        Invoke-PtJiraRequest -Path '/rest/api/3/search/jql' -Query @{ maxResults = 50; jql = 'project = OPS' } | Out-Null
         Should -Invoke Invoke-PtRestRetry -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter {
-            $Uri -eq 'https://example.atlassian.net/rest/api/3/search?jql=project%20%3D%20OPS&maxResults=50'
+            $Uri -eq 'https://example.atlassian.net/rest/api/3/search/jql?jql=project%20%3D%20OPS&maxResults=50'
         }
     }
 
