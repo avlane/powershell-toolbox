@@ -51,12 +51,14 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Test-PtTlsCertificate` | the certificate a TLS endpoint presents (any host and port) |
 | `Get-PtScheduledTaskReport` | scheduled tasks with last result and a status (Failed, Overdue, ...) |
 | `Register-PtMaintenanceTask` | create a daily/weekly scheduled task for a script |
+| `Export-PtScheduledTask`, `Import-PtScheduledTask` | save tasks as XML files and register them again elsewhere |
 | **SQL Server** | |
 | `Invoke-PtSqlQuery` | run T-SQL on several instances (in parallel), get plain objects back |
 | `Get-PtBackupStatus` | last full, differential and log backup per database, with a verdict |
 | `Get-PtRestoreStatus` | running restores and restore history |
 | `Get-PtAgentJobReport` | Agent jobs: last result, next run, recent failures, failed step |
 | `Get-PtDatabaseSpace` | file sizes, growth settings, volume free space |
+| `Get-PtDatabaseGrowth` | growth trend per database from the sizes of full backups |
 | `Get-PtBackupChain` | do the log backups since the last full backup form an unbroken chain? |
 | `Get-PtSqlServerInfo` | version, uptime, memory, MAXDOP, tempdb files, with default-setting flags |
 | `Get-PtBlockingSession` | blocked requests, chains and head blockers |
@@ -79,10 +81,19 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | **Azure, secrets and output** | |
 | `Get-PtAzureInventory` | resources and tags per subscription (Az), missing required tags |
 | `Get-PtAzVmInventory`, `Get-PtAzSqlInventory` | VMs with power state; SQL servers and databases with security flags |
-| `Initialize-PtVault`, `Set-PtSecret`, `Get-PtSecret` | SecretManagement / SecretStore helpers |
+| `Get-PtAzureTagSummary` | resource counts per tag value |
+| `Initialize-PtVault`, `Set-PtSecret`, `Get-PtSecret`, `Get-PtSecretInfo`, `Remove-PtSecret` | SecretManagement / SecretStore helpers |
 | `Export-PtReport` | write objects to CSV, JSON, HTML or Markdown |
 | `ConvertTo-PtMarkdownTable` | objects as a Markdown table for comments and chat |
-| `Format-PtStatusSummary` | "OK: 12, Low: 2, Failed: 1" for any report |
+| `Format-PtStatusSummary`, `Get-PtStatusSeverity` | "OK: 12, Low: 2, Failed: 1" for any report; good/warn/bad for a status word |
+
+## Daily report
+
+`scripts/Invoke-DailyReport.ps1 -ConfigPath .\examples\daily-report.json` runs the backup, Agent
+job, disk and certificate checks for the servers in the configuration file, writes one HTML
+report per check into a dated folder, prints a summary line per check, optionally posts it to a
+Jira issue, and exits 1 if anything needs attention. Run it from a task created with
+`Register-PtMaintenanceTask`. `-WhatIf` runs the checks without writing or posting anything.
 
 ## Tests
 

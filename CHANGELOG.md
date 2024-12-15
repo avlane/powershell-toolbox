@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.3.0 - 2024-12
+
+- **Jira:** `Search-PtJiraIssue` uses the enhanced search endpoint
+  (`/rest/api/3/search/jql`, page tokens); the old `/rest/api/3/search` is no longer
+  used. The query must be bounded. New: `Add-PtJiraAttachment`.
+- New: `Get-PtDatabaseGrowth`, `Export-PtScheduledTask`, `Import-PtScheduledTask`,
+  `Get-PtAzureTagSummary`, `Get-PtSecretInfo`, `Remove-PtSecret`.
+- `scripts/Invoke-DailyReport.ps1` with an example configuration;
+  `Get-PtStatusSeverity` is public.
+- `Get-PtDiskReport -IncludeMountPoints`; `Get-PtAgentJobReport` category and name
+  filters; `Get-PtCertificateExpiry` reads remote computers in one call.
+- Tests for the Jira date and issue converters.
+
 ## 1.2.0 - 2023-11
 
 - New: `Get-PtBackupChain`, `Get-PtSqlServerInfo`, `Get-PtAzVmInventory`,
