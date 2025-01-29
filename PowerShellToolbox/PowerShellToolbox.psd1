@@ -42,6 +42,7 @@
         'Get-PtServiceTriage',
         'Get-PtSqlServerInfo',
         'Get-PtStatusSeverity',
+        'Get-PtWaitStats',
         'Import-PtScheduledTask',
         'Initialize-PtVault',
         'Invoke-PtJiraRequest',
