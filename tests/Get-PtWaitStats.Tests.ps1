@@ -73,7 +73,7 @@ Describe 'Get-PtWaitStats' {
                     @(
                         [pscustomobject]@{ WaitType = 'WRITELOG'; WaitingTasks = 1500; WaitTimeMs = 15000; SignalWaitTimeMs = 150 },
                         [pscustomobject]@{ WaitType = 'PAGEIOLATCH_SH'; WaitingTasks = 500; WaitTimeMs = 50000; SignalWaitTimeMs = 100 },
-                        [pscustomobject]@{ WaitType = 'LCK_M_X'; WaitingTasks = 5; WaitTimeMs = 5000; SignalWaitTimeMs = 0 }
+                        [pscustomobject]@{ WaitType = 'LCK_M_X'; WaitingTasks = 5; WaitTimeMs = 3000; SignalWaitTimeMs = 0 }
                     )
                 }
             }
@@ -85,7 +85,7 @@ Describe 'Get-PtWaitStats' {
             $waits.WaitType -join ',' | Should -Be 'WRITELOG,LCK_M_X'
             $waits[0].WaitSeconds | Should -Be 5
             $waits[0].WaitingTasks | Should -Be 500
-            $waits[0].Percent | Should -Be 50
+            $waits[0].Percent | Should -Be 62.5
             Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -eq 30 }
         }
     }
