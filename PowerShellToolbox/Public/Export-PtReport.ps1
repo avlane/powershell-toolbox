@@ -1,11 +1,11 @@
 function Export-PtReport {
     <#
     .SYNOPSIS
-    Writes the objects from the pipeline to a CSV, JSON, HTML or Markdown file.
+    Writes the objects from the pipeline to a CSV, JSON, JSON Lines, HTML or Markdown file.
 
     .DESCRIPTION
     A small report writer for the other commands in this module. The format follows
-    the file extension (.csv, .json, .html, .htm or .md) unless -Format is given. The
+    the file extension (.csv, .json, .jsonl, .ndjson, .html, .htm or .md) unless -Format is given. The
     HTML output is one styled table in which every value is HTML-encoded, so text
     that comes from a server cannot inject markup. If the objects have a Status or
     Verdict property (as the reports in this module do), the row is coloured red,
@@ -21,7 +21,8 @@ function Export-PtReport {
     The file to write. An existing file is overwritten.
 
     .PARAMETER Format
-    Csv, Json, Html or Markdown. Default: from the extension of Path.
+    Csv, Json, JsonLines, Html or Markdown. JsonLines writes one compact JSON object per
+    line, which log shippers and tools such as jq and Splunk read directly. Default: from the extension of Path.
 
     .PARAMETER Title
     The heading of the HTML report.
@@ -54,7 +55,7 @@ function Export-PtReport {
         [Parameter(Mandatory = $true, Position = 0)]
         [string]$Path,
 
-        [ValidateSet('Csv', 'Json', 'Html', 'Markdown')]
+        [ValidateSet('Csv', 'Json', 'JsonLines', 'Html', 'Markdown')]
         [string]$Format,
 
         [string]$Title = 'Report',
@@ -84,10 +85,12 @@ function Export-PtReport {
             switch ([System.IO.Path]::GetExtension($Path).ToLowerInvariant()) {
                 '.csv'  { $Format = 'Csv' }
                 '.json' { $Format = 'Json' }
+                '.jsonl' { $Format = 'JsonLines' }
+                '.ndjson' { $Format = 'JsonLines' }
                 '.html' { $Format = 'Html' }
                 '.htm'  { $Format = 'Html' }
                 '.md'   { $Format = 'Markdown' }
-                default { throw "Cannot tell the format from the extension of $Path. Use -Format Csv, Json, Html or Markdown." }
+                default { throw "Cannot tell the format from the extension of $Path. Use -Format Csv, Json, JsonLines, Html or Markdown." }
             }
         }
 
@@ -104,6 +107,10 @@ function Export-PtReport {
                 }
                 'Json' {
                     ConvertTo-Json -InputObject $items.ToArray() -Depth $JsonDepth -Compress:$Compress | Set-Content -LiteralPath $Path -Encoding $Encoding
+                }
+                'JsonLines' {
+                    $lines = foreach ($item in $items) { ConvertTo-Json -InputObject $item -Depth $JsonDepth -Compress }
+                    Set-Content -LiteralPath $Path -Value $lines -Encoding $Encoding
                 }
                 'Markdown' {
                     $table = $items | ConvertTo-PtMarkdownTable

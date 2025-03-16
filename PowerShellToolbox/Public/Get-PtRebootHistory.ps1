@@ -58,28 +58,28 @@ function Get-PtRebootHistory {
                 continue
             }
 
-            foreach ($event in ($events | Sort-Object -Property TimeCreated -Descending)) {
-                $properties = @($event.Properties | ForEach-Object { $_.Value })
+            foreach ($logEvent in ($events | Sort-Object -Property TimeCreated -Descending)) {
+                $properties = @($logEvent.Properties | ForEach-Object { $_.Value })
                 $reason = ''
                 $user = ''
                 $process = ''
                 $detail = ''
 
-                if ($event.Id -eq 1074 -and $properties.Count -ge 7) {
+                if ($logEvent.Id -eq 1074 -and $properties.Count -ge 7) {
                     $process = [string]$properties[0]
                     $reason = [string]$properties[2]
                     $user = [string]$properties[6]
                     $detail = [string]$properties[5]
                 }
-                elseif ($event.Id -eq 41 -and $properties.Count -ge 1 -and [int64]$properties[0] -ne 0) {
+                elseif ($logEvent.Id -eq 41 -and $properties.Count -ge 1 -and [int64]$properties[0] -ne 0) {
                     $detail = 'Bugcheck code 0x{0:X}' -f [int64]$properties[0]
                 }
 
                 [pscustomobject]@{
                     ComputerName = $computer
-                    Time         = $event.TimeCreated
-                    Kind         = $kinds[[int]$event.Id]
-                    EventId      = $event.Id
+                    Time         = $logEvent.TimeCreated
+                    Kind         = $kinds[[int]$logEvent.Id]
+                    EventId      = $logEvent.Id
                     Process      = $process
                     Reason       = $reason
                     User         = $user

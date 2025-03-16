@@ -73,6 +73,15 @@ Describe 'Export-PtReport' {
         $text | Should -Be '[{"Name":"a","Inner":{"Deep":{"Value":1}}}]'
     }
 
+    It 'writes one compact JSON object per line for JSON Lines' {
+        $file = $rows | Export-PtReport -Path (Join-Path $TestDrive 'rows.jsonl')
+        $lines = @(Get-Content -LiteralPath $file.FullName)
+        $lines.Count | Should -Be 2
+        ($lines[0] | ConvertFrom-Json).Name | Should -Be 'SQLPROD01'
+        ($lines[1] | ConvertFrom-Json).Note | Should -Be '<script>alert(1)</script> & more'
+        $lines[0] | Should -Not -Match '^\['
+    }
+
     It 'creates the folder' {
         $path = Join-Path (Join-Path (Join-Path $TestDrive 'a') 'b') 'c.json'
         $rows | Export-PtReport -Path $path | Out-Null
