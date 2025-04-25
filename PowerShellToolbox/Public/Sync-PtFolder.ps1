@@ -15,7 +15,10 @@ function Sync-PtFolder {
 
     Robocopy's exit codes below 8 mean success (1 = files copied, 2 = extra files in
     the destination, 4 = mismatches, added together); 8 and above mean that some files
-    could not be copied or that the command itself failed.
+    could not be copied or that the command itself failed. The result spells the code out
+    in Meaning and carries the counts from robocopy's summary table (FilesCopied,
+    FilesSkipped, FilesFailed, FilesExtra, DirsCopied). With -WhatIf the counts are
+    those of the list-only run: what would have been copied.
 
     .PARAMETER Source
     The folder to copy from.
@@ -105,13 +108,21 @@ function Sync-PtFolder {
     if ($listOnly) { $arguments += '/L' }
 
     $result = Invoke-PtRobocopy -Argument $arguments
+    $exit = ConvertFrom-PtRobocopyExitCode -ExitCode $result.ExitCode
+    $counts = ConvertFrom-PtRobocopySummary -Output $result.Output
 
     [pscustomobject]@{
-        Source      = $sourceFull
-        Destination = $destinationFull
-        ListOnly    = $listOnly
-        ExitCode    = $result.ExitCode
-        Succeeded   = $result.ExitCode -lt 8
-        Output      = $result.Output
+        Source       = $sourceFull
+        Destination  = $destinationFull
+        ListOnly     = $listOnly
+        Succeeded    = $exit.Succeeded
+        ExitCode     = $exit.ExitCode
+        Meaning      = $exit.Meaning -join ' '
+        FilesCopied  = $counts.FilesCopied
+        FilesSkipped = $counts.FilesSkipped
+        FilesFailed  = $counts.FilesFailed
+        FilesExtra   = $counts.FilesExtra
+        DirsCopied   = $counts.DirsCopied
+        Output       = $result.Output
     }
 }
