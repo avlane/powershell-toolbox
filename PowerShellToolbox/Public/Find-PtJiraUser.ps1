@@ -10,7 +10,10 @@ function Find-PtJiraUser {
     EmailAddress is often empty). Use the AccountId in JQL (assignee = "<id>"), in
     New-PtJiraIssue -AssigneeAccountId and wherever else the API wants a person.
 
-    Needs Connect-PtJira first.
+    Needs Connect-PtJira first. Answers are remembered for ten minutes (per query and
+    options), because a script that assigns many issues to the same few people would
+    otherwise ask Jira for the same person over and over; connecting again clears the
+    memory. -NoCache asks Jira every time.
 
     .PARAMETER Query
     Part of a name or an e-mail address.
@@ -24,6 +27,9 @@ function Find-PtJiraUser {
 
     .PARAMETER First
     The most results to return. Default 50.
+
+    .PARAMETER NoCache
+    Do not use, and do not update, the remembered answers.
 
     .EXAMPLE
     Find-PtJiraUser -Query 'sam.example@example.com' -Exact
@@ -39,12 +45,20 @@ function Find-PtJiraUser {
         [switch]$Exact,
 
         [ValidateRange(1, 1000)]
-        [int]$First = 50
+        [int]$First = 50,
+
+        [switch]$NoCache
     )
+
+    $cacheKey = '{0}|{1}|{2}|{3}' -f $Query.ToLowerInvariant(), $IncludeInactive.IsPresent, $Exact.IsPresent, $First
+    if (-not $NoCache -and $script:PtJiraUserCache -and $script:PtJiraUserCache.ContainsKey($cacheKey)) {
+        $entry = $script:PtJiraUserCache[$cacheKey]
+        if (((Get-Date) - $entry.Stored).TotalMinutes -lt 10) { return $entry.Users }
+    }
 
     $users = Invoke-PtJiraRequest -Path '/rest/api/3/user/search' -Query @{ query = $Query; maxResults = $First }
 
-    foreach ($user in @($users)) {
+    $found = foreach ($user in @($users)) {
         if (-not $user) { continue }
         if (-not $IncludeInactive -and ($user.active -eq $false -or $user.accountType -ne 'atlassian')) { continue }
         if ($Exact -and $user.displayName -ne $Query -and $user.emailAddress -ne $Query) { continue }
@@ -57,4 +71,10 @@ function Find-PtJiraUser {
             AccountType  = $user.accountType
         }
     }
+
+    if (-not $NoCache) {
+        if (-not $script:PtJiraUserCache) { $script:PtJiraUserCache = @{} }
+        $script:PtJiraUserCache[$cacheKey] = @{ Stored = Get-Date; Users = @($found) }
+    }
+    $found
 }

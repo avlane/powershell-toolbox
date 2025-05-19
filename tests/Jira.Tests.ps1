@@ -289,8 +289,38 @@ Describe 'Find-PtJiraUser' {
         $users[0].DisplayName | Should -Be 'Sam Example'
     }
 
+    It 'remembers answers and asks Jira only once' {
+        InModuleScope PowerShellToolbox { $script:PtJiraUserCache = @{} }
+        $first = @(Find-PtJiraUser -Query 'Sam')
+        $second = @(Find-PtJiraUser -Query 'sam')
+        $second.Count | Should -Be $first.Count
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 1 -Exactly
+    }
+
+    It 'asks again with -NoCache, for other options, and after the memory expired' {
+        InModuleScope PowerShellToolbox { $script:PtJiraUserCache = @{} }
+        Find-PtJiraUser -Query 'sam' | Out-Null
+        Find-PtJiraUser -Query 'sam' -NoCache | Out-Null
+        Find-PtJiraUser -Query 'sam' -IncludeInactive | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 3 -Exactly
+
+        InModuleScope PowerShellToolbox {
+            foreach ($key in @($script:PtJiraUserCache.Keys)) { $script:PtJiraUserCache[$key].Stored = (Get-Date).AddMinutes(-11) }
+        }
+        Find-PtJiraUser -Query 'sam' | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 4 -Exactly
+    }
+
+    It 'forgets everything when connecting again' {
+        Find-PtJiraUser -Query 'sam' | Out-Null
+        $credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList 'a@example.com', (ConvertTo-SecureString 'x' -AsPlainText -Force)
+        Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox { }
+        Connect-PtJira -BaseUri 'https://example.atlassian.net' -Credential $credential -SkipValidation | Out-Null
+        (InModuleScope PowerShellToolbox { $script:PtJiraUserCache.Count }) | Should -Be 0
+    }
+
     It 'passes the query and the limit on' {
-        Find-PtJiraUser -Query 'sam' -First 5 | Out-Null
+        Find-PtJiraUser -Query 'sam' -First 5 -NoCache | Out-Null
         Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter {
             $Path -eq '/rest/api/3/user/search' -and $Query.query -eq 'sam' -and $Query.maxResults -eq 5
         }

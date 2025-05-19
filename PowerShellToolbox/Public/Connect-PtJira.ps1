@@ -80,6 +80,8 @@ function Connect-PtJira {
         $token = $account.GetNetworkCredential().Password
     }
 
+    $script:PtJiraUserCache = @{}    # answers from another site or account must not be reused
+
     # ${email} because "$email:" would be read as a variable in a scope called email
     $pair = [System.Text.Encoding]::UTF8.GetBytes("${email}:${token}")
     $script:PtJira = @{
