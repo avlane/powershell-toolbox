@@ -554,3 +554,48 @@ Describe 'Get-PtJiraIssue' {
         Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Query.fields -match 'comment' }
     }
 }
+
+Describe 'Get-PtJiraIssueChangelog' {
+    BeforeAll {
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Query.startAt -eq 0 } {
+            [pscustomobject]@{ isLast = $false; values = @(
+                    [pscustomobject]@{ created = '2025-06-02T10:00:00.000+0000'; author = [pscustomobject]@{ displayName = 'Sam'; accountId = 'abc' }
+                        items = @([pscustomobject]@{ field = 'status'; fromString = 'In Progress'; toString = 'Done' }) },
+                    [pscustomobject]@{ created = '2025-06-01T08:00:00.000+0000'; author = [pscustomobject]@{ displayName = 'Avery'; accountId = 'def' }
+                        items = @([pscustomobject]@{ field = 'status'; fromString = 'To Do'; toString = 'In Progress' }, [pscustomobject]@{ field = 'assignee'; fromString = $null; toString = 'Sam' }) }
+                ) }
+        }
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Query.startAt -eq 2 } {
+            [pscustomobject]@{ isLast = $true; values = @(
+                    [pscustomobject]@{ created = '2025-06-03T09:30:00.000+0000'; author = [pscustomobject]@{ displayName = 'Sam'; accountId = 'abc' }
+                        items = @([pscustomobject]@{ field = 'status'; fromString = 'Done'; toString = 'Reopened' }) }
+                ) }
+        }
+    }
+
+    It 'returns one row per changed field, oldest first, across pages' {
+        $changes = @(Get-PtJiraIssueChangelog OPS-1)
+        $changes.Count | Should -Be 4
+        $changes[0].Created.UtcDateTime | Should -Be ([datetime]::SpecifyKind([datetime]'2025-06-01 08:00:00', 'Utc'))
+        ($changes | ForEach-Object { "$($_.Field):$($_.To)" }) -join ',' | Should -Be 'status:In Progress,assignee:Sam,status:Done,status:Reopened'
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 2 -Exactly
+    }
+
+    It 'works out how long each old value had stood, per field' {
+        $status = @(Get-PtJiraIssueChangelog OPS-1 -Field status)
+        $status.Count | Should -Be 3
+        $status[0].TimeInPreviousValue | Should -BeNullOrEmpty
+        $status[1].TimeInPreviousValue | Should -Be ([timespan]::FromHours(26))
+        $status[2].TimeInPreviousValue | Should -Be ([timespan]'23:30:00')
+        $status[1].From | Should -Be 'In Progress'
+    }
+
+    It 'can start after a given time' {
+        $recent = @(Get-PtJiraIssueChangelog OPS-1 -Since ([datetimeoffset]'2025-06-02T00:00:00+00:00'))
+        $recent.To -join ',' | Should -Be 'Done,Reopened'
+    }
+
+    It 'rejects a malformed key' {
+        { Get-PtJiraIssueChangelog 'nope' } | Should -Throw
+    }
+}

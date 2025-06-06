@@ -33,6 +33,7 @@
         'Get-PtDiskReport',
         'Get-PtEventLogSummary',
         'Get-PtJiraIssue',
+        'Get-PtJiraIssueChangelog',
         'Get-PtJiraTransition',
         'Get-PtLongRunningQuery',
         'Get-PtRebootHistory',
