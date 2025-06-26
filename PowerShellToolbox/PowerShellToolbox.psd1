@@ -47,6 +47,7 @@
         'Get-PtWaitStats',
         'Import-PtScheduledTask',
         'Initialize-PtVault',
+        'Invoke-PtAzResourceGraph',
         'Invoke-PtJiraRequest',
         'Invoke-PtJiraTransition',
         'Invoke-PtRestPaged',

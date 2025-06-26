@@ -125,3 +125,42 @@ Describe 'Get-PtAzSqlInventory' {
         ($inventory | Where-Object Server -eq 'sql-empty.database.windows.net').Flags | Should -Be 'OldTls'
     }
 }
+
+Describe 'Invoke-PtAzResourceGraph' {
+    BeforeAll {
+        function global:Search-AzGraph { param($Query, $First, $Skip, $Subscription, $ManagementGroup) }
+        Import-Module (Join-Path (Join-Path (Split-Path -Parent $PSScriptRoot) 'PowerShellToolbox') 'PowerShellToolbox.psd1') -Force
+
+        Mock Search-AzGraph -ModuleName PowerShellToolbox -ParameterFilter { -not $Skip } {
+            [pscustomobject]@{ Data = @(1..$First | ForEach-Object { [pscustomobject]@{ name = "vm$_" } }) }
+        }
+        Mock Search-AzGraph -ModuleName PowerShellToolbox -ParameterFilter { $Skip -eq 3 } {
+            [pscustomobject]@{ Data = @([pscustomobject]@{ name = 'vm4' }, [pscustomobject]@{ name = 'vm5' }) }
+        }
+    }
+
+    AfterAll {
+        Remove-Item -Path Function:\global:Search-AzGraph -ErrorAction SilentlyContinue
+    }
+
+    It 'asks for the next page until one comes back short' {
+        $rows = @(Invoke-PtAzResourceGraph -Query 'Resources | project name' -PageSize 3)
+        $rows.name -join ',' | Should -Be 'vm1,vm2,vm3,vm4,vm5'
+        Should -Invoke Search-AzGraph -ModuleName PowerShellToolbox -Times 2 -Exactly
+    }
+
+    It 'stops at -First and asks for no more than needed' {
+        $rows = @(Invoke-PtAzResourceGraph -Query 'Resources | project name' -PageSize 3 -First 2)
+        $rows.Count | Should -Be 2
+        Should -Invoke Search-AzGraph -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $First -eq 2 }
+    }
+
+    It 'passes the scope on' {
+        Invoke-PtAzResourceGraph -Query 'Resources' -PageSize 3 -First 1 -Subscription '11111111-1111-1111-1111-111111111111' | Out-Null
+        Should -Invoke Search-AzGraph -ModuleName PowerShellToolbox -ParameterFilter { $Subscription -eq '11111111-1111-1111-1111-111111111111' }
+    }
+
+    It 'does not mix subscriptions and management groups' {
+        { Invoke-PtAzResourceGraph -Query 'Resources' -Subscription 'a' -ManagementGroup 'b' } | Should -Throw '*not both*'
+    }
+}
