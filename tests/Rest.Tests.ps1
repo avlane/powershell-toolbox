@@ -42,6 +42,26 @@ Describe 'Invoke-PtRestRetry' {
         Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 1 -Exactly -ParameterFilter { $Seconds -eq 4 }
     }
 
+    It 'stops waiting when the next delay would pass the total budget' {
+        Mock Invoke-RestMethod -ModuleName PowerShellToolbox { $global:PtTestCalls++; throw 'busy' }
+        Mock Get-PtHttpErrorDetail -ModuleName PowerShellToolbox {
+            [pscustomobject]@{ StatusCode = 429; RetryAfter = '40'; IsNetworkError = $false; Message = 'slow down' }
+        }
+        { Invoke-PtRestRetry -Uri 'https://api.example.com/x' -MaxRetries 5 -MaxTotalDelaySeconds 100 } | Should -Throw '*busy*'
+        # 40 + 40 fits into 100, a third 40 does not
+        Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 2 -Exactly
+        Should -Invoke Invoke-RestMethod -ModuleName PowerShellToolbox -Times 3 -Exactly
+    }
+
+    It 'does not limit the waiting without a budget' {
+        Mock Invoke-RestMethod -ModuleName PowerShellToolbox { $global:PtTestCalls++; throw 'busy' }
+        Mock Get-PtHttpErrorDetail -ModuleName PowerShellToolbox {
+            [pscustomobject]@{ StatusCode = 429; RetryAfter = '40'; IsNetworkError = $false; Message = 'slow down' }
+        }
+        { Invoke-PtRestRetry -Uri 'https://api.example.com/x' -MaxRetries 3 } | Should -Throw
+        Should -Invoke Start-Sleep -ModuleName PowerShellToolbox -Times 3 -Exactly
+    }
+
     It 'varies the back-off by up to a quarter either way' {
         Mock Invoke-RestMethod -ModuleName PowerShellToolbox { $global:PtTestCalls++; throw 'busy' }
         Mock Get-PtHttpErrorDetail -ModuleName PowerShellToolbox {

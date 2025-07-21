@@ -40,6 +40,12 @@ function Invoke-PtRestRetry {
     .PARAMETER TimeoutSec
     Timeout of each attempt. Default 60.
 
+    .PARAMETER MaxTotalDelaySeconds
+    A budget for the time spent waiting between tries. When the next wait would take the
+    total past it, the last error is thrown instead of waiting. Without it only
+    -MaxRetries limits the retrying, and a server that keeps sending long Retry-After
+    values can hold a script for minutes.
+
     .PARAMETER NoJitter
     By default each back-off delay is varied randomly by up to 25 percent either way,
     so that many clients that failed together do not all retry at the same instant.
@@ -76,6 +82,9 @@ function Invoke-PtRestRetry {
         [ValidateRange(1, 3600)]
         [int]$TimeoutSec = 60,
 
+        [ValidateRange(1, 3600)]
+        [int]$MaxTotalDelaySeconds,
+
         [switch]$NoJitter,
 
         [switch]$Raw
@@ -111,6 +120,7 @@ function Invoke-PtRestRetry {
 
     $retryableStatus = @(429, 500, 502, 503, 504)
     $attempt = 0
+    $totalDelay = 0
     while ($true) {
         $attempt++
         $detail = $null
@@ -142,23 +152,33 @@ function Invoke-PtRestRetry {
         if (-not $detail) { return $result }
 
         $retryable = $detail.IsNetworkError -or ($retryableStatus -contains $detail.StatusCode)
-        if (-not $retryable -or $attempt -gt $MaxRetries) {
+
+        # the delay before the next try, if there is going to be one
+        $delay = $null
+        if ($retryable -and $attempt -le $MaxRetries) {
+            $retryAfter = ConvertFrom-PtRetryAfter -Value $detail.RetryAfter
+            if ($null -ne $retryAfter) {
+                $delay = $retryAfter
+            }
+            else {
+                $delay = [math]::Min(60, $InitialDelaySeconds * [math]::Pow(2, $attempt - 1))
+                if (-not $NoJitter) { $delay = [math]::Round($delay * (0.75 + (Get-Random -Minimum 0.0 -Maximum 0.5)), 1) }
+            }
+            if ($MaxTotalDelaySeconds -and ($totalDelay + $delay) -gt $MaxTotalDelaySeconds) {
+                Write-Verbose "Giving up: waiting another $delay seconds would pass the limit of $MaxTotalDelaySeconds seconds in total."
+                $delay = $null
+            }
+        }
+
+        if ($null -eq $delay) {
             if ($caught) { throw $caught }
             $text = if ($result -is [string]) { $result } elseif ($Raw) { [string]$result.Content } else { ConvertTo-Json -InputObject $result -Depth 3 -Compress }
             if ($text.Length -gt 500) { $text = $text.Substring(0, 500) }
             throw "$($detail.Message) from $Uri : $text"
         }
 
-        $retryAfter = ConvertFrom-PtRetryAfter -Value $detail.RetryAfter
-        if ($null -ne $retryAfter) {
-            $delay = $retryAfter
-        }
-        else {
-            $delay = [math]::Min(60, $InitialDelaySeconds * [math]::Pow(2, $attempt - 1))
-            if (-not $NoJitter) { $delay = [math]::Round($delay * (0.75 + (Get-Random -Minimum 0.0 -Maximum 0.5)), 1) }
-        }
-
         Write-Verbose "Attempt $attempt of $($MaxRetries + 1) failed ($($detail.Message)); waiting $delay seconds."
         Start-Sleep -Seconds $delay
+        $totalDelay += $delay
     }
 }
