@@ -335,6 +335,19 @@ Describe 'Invoke-PtRestPaged' {
         }
     }
 
+    Context 'an API that chooses its own page size' {
+        It 'insists on knowing the page size, since a short page ends the paging' {
+            { Invoke-PtRestPaged -Uri 'https://api.example.com/items' -OffsetParameter page -PageBased } | Should -Throw '*-PageSize*'
+        }
+
+        It 'accepts it when it is given' {
+            Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox -ParameterFilter { $Uri -eq 'https://api.example.com/items?page=1' } { @('a', 'b', 'c') }
+            Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox -ParameterFilter { $Uri -eq 'https://api.example.com/items?page=2' } { @('d') }
+            $items = @(Invoke-PtRestPaged -Uri 'https://api.example.com/items' -OffsetParameter page -PageBased -PageSize 3)
+            $items -join ',' | Should -Be 'a,b,c,d'
+        }
+    }
+
     Context 'safety' {
         It 'stops at MaxPages' {
             Mock Invoke-PtRestRetry -ModuleName PowerShellToolbox {

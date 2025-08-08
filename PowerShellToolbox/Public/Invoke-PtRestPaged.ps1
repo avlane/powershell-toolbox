@@ -44,7 +44,9 @@ function Invoke-PtRestPaged {
     pageSize ...). Sent together with -PageSize.
 
     .PARAMETER PageSize
-    Items per page for offset paging. A page with fewer items ends the paging. Default 100.
+    Items per page for offset paging. A page with fewer items ends the paging, so when
+    the API sets the page size itself (no -LimitParameter) this must be given and must
+    match it. Default 100 when -LimitParameter sends it to the API.
 
     .PARAMETER PageBased
     The position parameter is a page number starting at 1, not an item offset.
@@ -96,6 +98,13 @@ function Invoke-PtRestPaged {
     }
     if (@($modes).Count -eq 0) {
         throw 'Say how to find the next page: -UseLinkHeader, -NextLinkProperty or -OffsetParameter.'
+    }
+
+    # Without -LimitParameter the API chooses the page size, and the default of 100 here
+    # would be wrong for an API that returns 30 per page: paging would stop after the
+    # first page, because it was "short". So the page size must be given explicitly.
+    if ($OffsetParameter -and -not $LimitParameter -and -not $PSBoundParameters.ContainsKey('PageSize')) {
+        throw 'The API chooses its own page size, so say how large its pages are with -PageSize (or name the parameter that sets it with -LimitParameter).'
     }
 
     $request = @{ MaxRetries = $MaxRetries }
