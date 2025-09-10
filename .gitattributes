@@ -1,0 +1,7 @@
+# let git normalise line endings; the scripts run on Windows and elsewhere
+* text=auto
+*.ps1 text
+*.psm1 text
+*.psd1 text
+*.md text
+*.yml text

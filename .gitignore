@@ -13,3 +13,6 @@ Thumbs.db
 # local report output
 /out/
 /reports/
+
+# configuration with real server names stays out of the repository
+examples/*.local.json
