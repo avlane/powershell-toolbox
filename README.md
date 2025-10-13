@@ -95,6 +95,9 @@ report per check into a dated folder, prints a summary line per check, optionall
 Jira issue, and exits 1 if anything needs attention. Run it from a task created with
 `Register-PtMaintenanceTask`. `-WhatIf` runs the checks without writing or posting anything.
 
+See `docs/troubleshooting.md` for the likely problems with remoting, SQL Server encryption,
+Jira authentication and secrets.
+
 ## Tests
 
 ```powershell
