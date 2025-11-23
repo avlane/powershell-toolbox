@@ -46,7 +46,8 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Get-PtDiskReport` | free space of fixed disks, flags low ones (parallel over computers) |
 | `Get-PtServiceTriage` | automatic services that are not running |
 | `Restart-PtFailedService` | start such services through CIM and wait for them (`-WhatIf` aware) |
-| `Get-PtEventLogSummary` | errors and warnings grouped by provider and event id |
+| `Get-PtEventLogSummary` | errors and warnings grouped by provider and event id, or as a timeline |
+| `Get-PtRebootHistory` | planned restarts, unexpected shutdowns and crashes |
 | `Get-PtCertificateExpiry` | certificates in a store with days until expiry |
 | `Test-PtTlsCertificate` | the certificate a TLS endpoint presents (any host and port) |
 | `Get-PtScheduledTaskReport` | scheduled tasks with last result and a status (Failed, Overdue, ...) |
@@ -58,6 +59,7 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Get-PtRestoreStatus` | running restores and restore history |
 | `Get-PtAgentJobReport` | Agent jobs: last result, next run, recent failures, failed step |
 | `Get-PtDatabaseSpace` | file sizes, growth settings, volume free space |
+| `Get-PtWaitStats` | top waits without the idle ones, optionally over a sampling interval |
 | `Get-PtDatabaseGrowth` | growth trend per database from the sizes of full backups |
 | `Get-PtBackupChain` | do the log backups since the last full backup form an unbroken chain? |
 | `Get-PtSqlServerInfo` | version, uptime, memory, MAXDOP, tempdb files, with default-setting flags |
@@ -68,12 +70,14 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Compress-PtOldFile` | zip old files one by one, remove the original after a check |
 | `Copy-PtFileSafe` | copy or move with a hash check before the final rename |
 | `Rename-PtFileBulk` | regex renames that refuse collisions |
+| `Sync-PtFolder` | robocopy with guards; `-WhatIf` shows the real file list |
 | **REST and Jira Cloud** | |
 | `Invoke-PtRestRetry` | `Invoke-RestMethod` with retries, back-off and Retry-After |
 | `Invoke-PtRestPaged` | follow a Link header or a next-link property through all pages |
 | `Connect-PtJira`, `Invoke-PtJiraRequest` | sign in with an API token; raw API calls |
 | `Search-PtJiraIssue`, `Get-PtJiraIssue` | JQL search (enhanced search, page tokens) and single issues as flat objects |
 | `Add-PtJiraAttachment` | attach files (multipart upload, size checked first) |
+| `Get-PtJiraIssueChangelog` | field changes, with the time each old value stood |
 | `New-PtJiraIssue`, `Add-PtJiraComment`, `Add-PtJiraWorklog` | create issues, comment, log time |
 | `Get-PtJiraTransition`, `Invoke-PtJiraTransition` | move issues through the workflow |
 | `Find-PtJiraUser` | find account ids by name or e-mail |
@@ -82,8 +86,9 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Get-PtAzureInventory` | resources and tags per subscription (Az), missing required tags |
 | `Get-PtAzVmInventory`, `Get-PtAzSqlInventory` | VMs with power state; SQL servers and databases with security flags |
 | `Get-PtAzureTagSummary` | resource counts per tag value |
+| `Invoke-PtAzResourceGraph` | Resource Graph queries with paging |
 | `Initialize-PtVault`, `Set-PtSecret`, `Get-PtSecret`, `Get-PtSecretInfo`, `Remove-PtSecret` | SecretManagement / SecretStore helpers |
-| `Export-PtReport` | write objects to CSV, JSON, HTML or Markdown |
+| `Export-PtReport` | write objects to CSV, JSON, JSON Lines, HTML or Markdown |
 | `ConvertTo-PtMarkdownTable` | objects as a Markdown table for comments and chat |
 | `Format-PtStatusSummary`, `Get-PtStatusSeverity` | "OK: 12, Low: 2, Failed: 1" for any report; good/warn/bad for a status word |
 

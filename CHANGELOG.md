@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.4.0 - 2025-11
+
+- New: `Get-PtWaitStats`, `Get-PtRebootHistory`, `Sync-PtFolder`,
+  `Get-PtJiraIssueChangelog`, `Invoke-PtAzResourceGraph`.
+- `Export-PtReport` writes JSON Lines.
+- `Invoke-PtRestRetry -MaxTotalDelaySeconds`; `Find-PtJiraUser` remembers answers.
+- Fixed: `Invoke-PtRestPaged` stopped after the first page of an API whose page size is
+  smaller than the default; `-PageSize` is required in that case.
+- Module-level tests (manifest, exports, help, parameters, verbs, `-WhatIf`);
+  `docs/troubleshooting.md`; `.editorconfig`.
+
 ## 1.3.0 - 2024-12
 
 - **Jira:** `Search-PtJiraIssue` uses the enhanced search endpoint

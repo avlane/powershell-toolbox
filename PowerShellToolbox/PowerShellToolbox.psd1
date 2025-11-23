@@ -1,6 +1,6 @@
 @{
     RootModule        = 'PowerShellToolbox.psm1'
-    ModuleVersion     = '1.3.0'
+    ModuleVersion     = '1.4.0'
     GUID              = 'cdab71a9-142c-4649-aea1-2bf48a32a9c1'
     Author            = 'Avery Lane'
     Copyright         = '(c) 2019 Avery Lane. MIT License.'
