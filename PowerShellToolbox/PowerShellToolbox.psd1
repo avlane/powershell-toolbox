@@ -1,11 +1,11 @@
 @{
     RootModule        = 'PowerShellToolbox.psm1'
-    ModuleVersion     = '1.4.0'
+    ModuleVersion     = '2.0.0'
     GUID              = 'cdab71a9-142c-4649-aea1-2bf48a32a9c1'
     Author            = 'Avery Lane'
     Copyright         = '(c) 2019 Avery Lane. MIT License.'
     Description       = 'Small admin helpers: disk, certificate, service, event log and scheduled task reports; SQL Server backup, restore, Agent job, space and blocking status; REST and Jira Cloud helpers; safe file cleanup.'
-    PowerShellVersion = '7.2'
+    PowerShellVersion = '7.4'
     CompatiblePSEditions = @('Core')
     FunctionsToExport = @(
         'Add-PtJiraAttachment',

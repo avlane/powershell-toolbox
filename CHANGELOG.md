@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0 - 2026-01
+
+- **Breaking:** requires PowerShell 7.4. PowerShell 7.2 left support in November 2024;
+  1.4.0 is the last release for it.
+
 ## 1.4.0 - 2025-11
 
 - New: `Get-PtWaitStats`, `Get-PtRebootHistory`, `Sync-PtFolder`,

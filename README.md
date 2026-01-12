@@ -7,9 +7,9 @@ Azure inventory and a safe old-file cleaner.
 
 ## Requirements
 
-- PowerShell 7.2 or later (7.2 and 7.4 are the long-term support releases) on Windows (the commands use CIM, the event log, the
+- PowerShell 7.4 or later (7.4 is a long-term support release) on Windows (the commands use CIM, the event log, the
   certificate provider and similar Windows features). Remote CIM queries need WinRM
-  on the target computers. Version 0.3.0 was the last to support Windows PowerShell 5.1.
+  on the target computers. Version 1.4.0 was the last to support PowerShell 7.2 (end of support November 2024); 0.3.0 was the last for Windows PowerShell 5.1.
 - For the SQL commands: the `SqlServer` module (`Install-Module SqlServer`).
 - For the Jira commands: a Jira Cloud site and an API token.
 - For `Get-PtAzureInventory`: the `Az` module and a signed-in session (`Connect-AzAccount`).
