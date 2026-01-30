@@ -12,6 +12,12 @@ function Get-PtServiceTriage {
     .PARAMETER ComputerName
     The computers to query. Defaults to the local computer.
 
+    .PARAMETER OnlyFailed
+    Only services that stopped with an error: an exit code other than 0 (stopped
+    normally) and 1077 (not started since boot, which is what services that start on a
+    trigger or after a delay show until their time comes). Cuts out most of the noise
+    from automatic services that are stopped on purpose.
+
     .PARAMETER IncludeLastEvent
     For each service, look in the System log of the last 7 days for the newest
     Service Control Manager event that names it (terminated unexpectedly, failed to
@@ -34,6 +40,8 @@ function Get-PtServiceTriage {
         [string[]]$ComputerName = $env:COMPUTERNAME,
 
         [switch]$IncludeExpected,
+
+        [switch]$OnlyFailed,
 
         [switch]$IncludeLastEvent
     )
@@ -69,6 +77,7 @@ function Get-PtServiceTriage {
 
             foreach ($service in $services) {
                 if (-not $IncludeExpected -and $expected -contains $service.Name) { continue }
+                if ($OnlyFailed -and $service.ExitCode -in 0, 1077) { continue }
 
                 $row = [ordered]@{
                     ComputerName = $computer

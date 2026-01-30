@@ -32,6 +32,19 @@ Describe 'Get-PtServiceTriage' {
             @(Get-PtServiceTriage -ComputerName 'SQLPROD01' -IncludeExpected).Count | Should -Be 3
         }
 
+        It 'with -OnlyFailed lists only services that stopped with an error' {
+            Mock Get-CimInstance -ModuleName PowerShellToolbox {
+                @(
+                    [pscustomobject]@{ Name = 'MSSQLSERVER'; DisplayName = 'SQL Server'; State = 'Stopped'; StartName = 'CORP\svc-sql'; ExitCode = 1067 },
+                    [pscustomobject]@{ Name = 'Clean'; DisplayName = 'Stopped on purpose'; State = 'Stopped'; StartName = 'LocalSystem'; ExitCode = 0 },
+                    [pscustomobject]@{ Name = 'Delayed'; DisplayName = 'Not started yet'; State = 'Stopped'; StartName = 'LocalSystem'; ExitCode = 1077 },
+                    [pscustomobject]@{ Name = 'Specific'; DisplayName = 'Own error code'; State = 'Stopped'; StartName = 'LocalSystem'; ExitCode = 1066 }
+                )
+            }
+            @(Get-PtServiceTriage -ComputerName 'SQLPROD01' -OnlyFailed).Name -join ',' | Should -Be 'MSSQLSERVER,Specific'
+            @(Get-PtServiceTriage -ComputerName 'SQLPROD01').Count | Should -Be 4
+        }
+
         It 'asks only for automatic services that are not running' {
             Get-PtServiceTriage -ComputerName 'SQLPROD01' | Out-Null
             Should -Invoke Get-CimInstance -ModuleName PowerShellToolbox -ParameterFilter {
