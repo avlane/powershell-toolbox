@@ -31,6 +31,19 @@ Describe 'Format-PtStatusSummary' {
         (@() | Format-PtStatusSummary -Color Never) | Should -Be 'No rows'
     }
 
+    It 'gives one line per group with -GroupBy' {
+        $multi = @(
+            [pscustomobject]@{ ComputerName = 'A'; Status = 'OK' },
+            [pscustomobject]@{ ComputerName = 'B'; Status = 'Low' },
+            [pscustomobject]@{ ComputerName = 'A'; Status = 'Low' },
+            [pscustomobject]@{ ComputerName = 'A'; Status = 'OK' }
+        )
+        $lines = @($multi | Format-PtStatusSummary -GroupBy ComputerName -Color Never)
+        $lines.Count | Should -Be 2
+        $lines[0] | Should -Be 'A: OK: 2, Low: 1 (3 total)'
+        $lines[1] | Should -Be 'B: Low: 1 (1 total)'
+    }
+
     It 'never colours with -Color Never' {
         ($rows | Format-PtStatusSummary -Color Never) | Should -Not -Match ([string][char]27)
     }

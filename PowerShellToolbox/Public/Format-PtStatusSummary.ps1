@@ -16,6 +16,10 @@ function Format-PtStatusSummary {
     .PARAMETER Property
     The property that holds the status. Default: Status, otherwise Verdict.
 
+    .PARAMETER GroupBy
+    A property to group by, for example ComputerName. The result is then one line per
+    group, "SQLPROD01: OK: 2, Low: 1 (3 total)", in order of first appearance.
+
     .PARAMETER Color
     Auto (default), Always or Never.
 
@@ -31,18 +35,20 @@ function Format-PtStatusSummary {
 
         [string]$Property,
 
+        [string]$GroupBy,
+
         [ValidateSet('Auto', 'Always', 'Never')]
         [string]$Color = 'Auto'
     )
 
     begin {
-        $counts = [ordered]@{}
-        $total = 0
+        # group name -> ordered table of status -> count; one group with an empty name without -GroupBy
+        $groups = [ordered]@{}
+        $totals = @{}
     }
 
     process {
         if ($null -eq $InputObject) { return }
-        $total++
 
         $name = $Property
         if (-not $name) {
@@ -50,28 +56,40 @@ function Format-PtStatusSummary {
         }
         $value = [string]$InputObject.$name
         if (-not $value) { $value = '(none)' }
-        if ($counts.Contains($value)) { $counts[$value]++ } else { $counts[$value] = 1 }
+
+        $group = $GroupBy ? [string]$InputObject.$GroupBy : ''
+        if (-not $groups.Contains($group)) {
+            $groups[$group] = [ordered]@{}
+            $totals[$group] = 0
+        }
+        $totals[$group]++
+        if ($groups[$group].Contains($value)) { $groups[$group][$value]++ } else { $groups[$group][$value] = 1 }
     }
 
     end {
+        if ($groups.Count -eq 0) { return 'No rows' }
+
         $style = $PSStyle
         $useColor = $false
         if ($Color -eq 'Always') { $useColor = $true }
         elseif ($Color -eq 'Auto' -and -not [Console]::IsOutputRedirected -and $style.OutputRendering -ne 'PlainText') { $useColor = $true }
 
-        $parts = foreach ($key in $counts.Keys) {
-            $text = '{0}: {1}' -f $key, $counts[$key]
-            if ($useColor) {
-                switch (Get-PtStatusSeverity -Status $key) {
-                    'good' { $text = $style.Foreground.Green + $text + $style.Reset }
-                    'warn' { $text = $style.Foreground.Yellow + $text + $style.Reset }
-                    'bad'  { $text = $style.Foreground.Red + $text + $style.Reset }
+        foreach ($group in $groups.Keys) {
+            $counts = $groups[$group]
+            $parts = foreach ($key in $counts.Keys) {
+                $text = '{0}: {1}' -f $key, $counts[$key]
+                if ($useColor) {
+                    switch (Get-PtStatusSeverity -Status $key) {
+                        'good' { $text = $style.Foreground.Green + $text + $style.Reset }
+                        'warn' { $text = $style.Foreground.Yellow + $text + $style.Reset }
+                        'bad'  { $text = $style.Foreground.Red + $text + $style.Reset }
+                    }
                 }
+                $text
             }
-            $text
-        }
 
-        if ($total -eq 0) { return 'No rows' }
-        '{0} ({1} total)' -f ($parts -join ', '), $total
+            $line = '{0} ({1} total)' -f ($parts -join ', '), $totals[$group]
+            if ($GroupBy) { "${group}: $line" } else { $line }
+        }
     }
 }
