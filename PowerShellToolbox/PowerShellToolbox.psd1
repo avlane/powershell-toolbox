@@ -35,6 +35,7 @@
         'Get-PtJiraIssue',
         'Get-PtJiraIssueChangelog',
         'Get-PtJiraTransition',
+        'Get-PtJiraWorklog',
         'Get-PtLongRunningQuery',
         'Get-PtRebootHistory',
         'Get-PtRestoreStatus',

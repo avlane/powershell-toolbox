@@ -599,3 +599,51 @@ Describe 'Get-PtJiraIssueChangelog' {
         { Get-PtJiraIssueChangelog 'nope' } | Should -Throw
     }
 }
+
+Describe 'Get-PtJiraWorklog' {
+    BeforeAll {
+        Mock Search-PtJiraIssue -ModuleName PowerShellToolbox {
+            @([pscustomobject]@{ Key = 'OPS-1'; Summary = 'Disk F: is full' }, [pscustomobject]@{ Key = 'OPS-2'; Summary = 'Patch run' })
+        }
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Path -eq '/rest/api/3/myself' } {
+            [pscustomobject]@{ accountId = 'me-123' }
+        }
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Path -eq '/rest/api/3/issue/OPS-1/worklog' } {
+            [pscustomobject]@{ total = 3; worklogs = @(
+                    [pscustomobject]@{ author = [pscustomobject]@{ accountId = 'me-123'; displayName = 'Avery' }; started = '2026-03-05T09:00:00.000+0000'; timeSpentSeconds = 5400; timeSpent = '1h 30m'
+                        comment = [pscustomobject]@{ type = 'doc'; content = @([pscustomobject]@{ type = 'paragraph'; content = @([pscustomobject]@{ type = 'text'; text = 'Extended the volume' }) }) } },
+                    [pscustomobject]@{ author = [pscustomobject]@{ accountId = 'someone-else'; displayName = 'Sam' }; started = '2026-03-05T09:00:00.000+0000'; timeSpentSeconds = 3600; timeSpent = '1h'; comment = $null },
+                    [pscustomobject]@{ author = [pscustomobject]@{ accountId = 'me-123'; displayName = 'Avery' }; started = '2026-02-27T09:00:00.000+0000'; timeSpentSeconds = 1800; timeSpent = '30m'; comment = $null }
+                ) }
+        }
+        Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Path -eq '/rest/api/3/issue/OPS-2/worklog' } {
+            [pscustomobject]@{ total = 1; worklogs = @(
+                    [pscustomobject]@{ author = [pscustomobject]@{ accountId = 'me-123'; displayName = 'Avery' }; started = '2026-03-31T22:00:00.000+0000'; timeSpentSeconds = 7200; timeSpent = '2h'; comment = $null }
+                ) }
+        }
+    }
+
+    It 'returns only my worklogs started inside the period' {
+        $rows = @(Get-PtJiraWorklog -From ([datetime]'2026-03-01') -To ([datetime]'2026-03-31'))
+        $rows.Count | Should -Be 2
+        ($rows | ForEach-Object { "$($_.Key):$($_.Hours)" }) -join ',' | Should -Be 'OPS-1:1.5,OPS-2:2'
+        $rows[0].Comment | Should -Be 'Extended the volume'
+        $rows[0].Summary | Should -Be 'Disk F: is full'
+    }
+
+    It 'builds a bounded JQL query for the author and the dates' {
+        Get-PtJiraWorklog -AccountId 'abc' -From ([datetime]'2026-03-01') -To ([datetime]'2026-03-31') -ProjectKey OPS | Out-Null
+        Should -Invoke Search-PtJiraIssue -ModuleName PowerShellToolbox -ParameterFilter {
+            $Jql -eq 'project = "OPS" AND (worklogAuthor = "abc" AND worklogDate >= "2026-03-01" AND worklogDate <= "2026-03-31")'
+        }
+    }
+
+    It 'asks Jira who I am only when no account id is given' {
+        Get-PtJiraWorklog -AccountId 'abc' -From ([datetime]'2026-03-01') -To ([datetime]'2026-03-31') | Out-Null
+        Should -Invoke Invoke-PtJiraRequest -ModuleName PowerShellToolbox -Times 0 -Exactly -ParameterFilter { $Path -eq '/rest/api/3/myself' }
+    }
+
+    It 'rejects an end date before the start date' {
+        { Get-PtJiraWorklog -AccountId 'abc' -From ([datetime]'2026-03-31') -To ([datetime]'2026-03-01') } | Should -Throw '*before the start*'
+    }
+}
