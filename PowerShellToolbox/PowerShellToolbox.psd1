@@ -43,6 +43,7 @@
         'Get-PtSecret',
         'Get-PtSecretInfo',
         'Get-PtServiceTriage',
+        'Get-PtSqlErrorLog',
         'Get-PtSqlServerInfo',
         'Get-PtStatusSeverity',
         'Get-PtWaitStats',

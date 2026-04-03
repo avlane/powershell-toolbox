@@ -618,7 +618,7 @@ Describe 'Get-PtJiraWorklog' {
         }
         Mock Invoke-PtJiraRequest -ModuleName PowerShellToolbox -ParameterFilter { $Path -eq '/rest/api/3/issue/OPS-2/worklog' } {
             [pscustomobject]@{ total = 1; worklogs = @(
-                    [pscustomobject]@{ author = [pscustomobject]@{ accountId = 'me-123'; displayName = 'Avery' }; started = '2026-03-31T22:00:00.000+0000'; timeSpentSeconds = 7200; timeSpent = '2h'; comment = $null }
+                    [pscustomobject]@{ author = [pscustomobject]@{ accountId = 'me-123'; displayName = 'Avery' }; started = '2026-03-30T12:00:00.000+0000'; timeSpentSeconds = 7200; timeSpent = '2h'; comment = $null }
                 ) }
         }
     }
