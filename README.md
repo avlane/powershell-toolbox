@@ -103,6 +103,12 @@ Jira issue, and exits 1 if anything needs attention. Run it from a task created 
 See `docs/troubleshooting.md` for the likely problems with remoting, SQL Server encryption,
 Jira authentication and secrets.
 
+## Examples
+
+`examples/` holds scripts that combine several commands, with `-WhatIf` support:
+`New-JiraIssuesForLowDisks.ps1` opens a Jira issue for every low disk unless one is already open,
+and `daily-report.json` is the configuration for `scripts/Invoke-DailyReport.ps1`.
+
 ## Tests
 
 ```powershell
