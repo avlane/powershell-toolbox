@@ -120,7 +120,7 @@ The tests mock the commands that talk to other machines (`Get-CimInstance`,
 Pester 5.
 
 `./scripts/Invoke-Tests.ps1` runs them with a CI configuration (NUnit results,
-optional `-Coverage`).
+optional `-Coverage`, `-Tag` / `-ExcludeTag`; the scheduled task tests are tagged `Windows`).
 
 Lint settings for PSScriptAnalyzer are in `PSScriptAnalyzerSettings.psd1`.
 

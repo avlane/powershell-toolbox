@@ -12,7 +12,7 @@ BeforeAll {
     Import-Module $manifest -Force
 }
 
-Describe 'Get-PtScheduledTaskReport' -Skip:(-not $onWindows) {
+Describe 'Get-PtScheduledTaskReport' -Tag 'Windows' -Skip:(-not $onWindows) {
     BeforeAll {
         Mock Get-ScheduledTask -ModuleName PowerShellToolbox {
             @(

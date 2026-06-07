@@ -12,7 +12,7 @@ BeforeAll {
     Import-Module $manifest -Force
 }
 
-Describe 'Export-PtScheduledTask and Import-PtScheduledTask' -Skip:(-not $onWindows) {
+Describe 'Export-PtScheduledTask and Import-PtScheduledTask' -Tag 'Windows' -Skip:(-not $onWindows) {
     BeforeAll {
         Mock Get-ScheduledTask -ModuleName PowerShellToolbox -ParameterFilter { $TaskPath -eq '\*' } {
             @(
