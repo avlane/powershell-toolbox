@@ -68,12 +68,16 @@ ORDER BY r.wait_time DESC;
             $common = @{ ServerInstance = $server; Database = 'master' }
             if ($Credential) { $common['Credential'] = $Credential }
 
-            $blocked = @(Invoke-PtSqlQuery @common -Query $blockedQuery | Where-Object { $_.WaitTimeMs -ge ($MinimumWaitSeconds * 1000) })
+            $allBlocked = @(Invoke-PtSqlQuery @common -Query $blockedQuery)
+            $blocked = @($allBlocked | Where-Object { $_.WaitTimeMs -ge ($MinimumWaitSeconds * 1000) })
             if ($blocked.Count -eq 0) { continue }
 
-            # session id -> the session it waits for, to walk each chain to its head
+            # session id -> the session it waits for, to walk each chain to its head. This
+            # uses every blocked request, also the ones that have waited less than the
+            # minimum: a session in the middle of a chain that has only just started to
+            # wait must not be mistaken for the head.
             $waitsFor = @{}
-            foreach ($row in $blocked) { $waitsFor[[int]$row.SessionId] = [int]$row.BlockingSessionId }
+            foreach ($row in $allBlocked) { $waitsFor[[int]$row.SessionId] = [int]$row.BlockingSessionId }
 
             $heads = New-Object -TypeName 'System.Collections.Generic.List[int]'
             foreach ($row in $blocked) {
