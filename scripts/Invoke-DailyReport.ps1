@@ -16,9 +16,11 @@ written and no comment is posted.
 
 The configuration is a JSON file, see examples\daily-report.json:
 
-  servers      SQL Server instances for the backup and Agent job checks
-  computers    computers for the disk and certificate checks
+  servers      SQL Server instances for the backup, Agent job and database space checks
+  computers    computers for the disk, certificate and scheduled task checks
   outputFolder where the daily folders are created
+  checks       optional: which checks to run, from Backups, AgentJobs, DatabaseSpace,
+               Disks, Certs and Tasks. Default: Backups, AgentJobs, Disks and Certs.
   jira         optional: baseUri, issueKey and secretName (a PSCredential stored with
                Set-PtSecret: e-mail address and API token)
 
@@ -46,11 +48,22 @@ foreach ($required in 'servers', 'computers', 'outputFolder') {
 $day = Get-Date -Format 'yyyy-MM-dd'
 $folder = Join-Path $config.outputFolder $day
 
-$checks = [ordered]@{
-    'Backups'   = { Get-PtBackupStatus -ServerInstance @($config.servers) }
-    'AgentJobs' = { Get-PtAgentJobReport -ServerInstance @($config.servers) -OnlyProblems }
-    'Disks'     = { Get-PtDiskReport -ComputerName @($config.computers) -IncludeMountPoints }
-    'Certs'     = { Get-PtCertificateExpiry -ComputerName @($config.computers) -OnlyProblems }
+$available = [ordered]@{
+    'Backups'       = { Get-PtBackupStatus -ServerInstance @($config.servers) }
+    'AgentJobs'     = { Get-PtAgentJobReport -ServerInstance @($config.servers) -OnlyProblems }
+    'DatabaseSpace' = { Get-PtDatabaseSpace -ServerInstance @($config.servers) }
+    'Disks'         = { Get-PtDiskReport -ComputerName @($config.computers) -IncludeMountPoints }
+    'Certs'         = { Get-PtCertificateExpiry -ComputerName @($config.computers) -OnlyProblems }
+    'Tasks'         = { Get-PtScheduledTaskReport -OnlyProblems }
+}
+
+$wanted = $config.checks ? @($config.checks) : @('Backups', 'AgentJobs', 'Disks', 'Certs')
+$unknown = @($wanted | Where-Object { -not $available.Contains($_) })
+if ($unknown.Count -gt 0) { throw "Unknown check(s) in the configuration: $($unknown -join ', '). Available: $($available.Keys -join ', ')." }
+
+$checks = [ordered]@{}
+foreach ($name in $available.Keys) {
+    if ($wanted -contains $name) { $checks[$name] = $available[$name] }
 }
 
 $summary = New-Object -TypeName 'System.Collections.Generic.List[string]'
