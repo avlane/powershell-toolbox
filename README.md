@@ -44,7 +44,7 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | --- | --- |
 | **Servers and Windows** | |
 | `Get-PtDiskReport` | free space of fixed disks, flags low ones (parallel over computers) |
-| `Get-PtServiceTriage` | automatic services that are not running |
+| `Get-PtServiceTriage` | automatic services that are not running (`-OnlyFailed`, `-IncludeLastEvent`) |
 | `Restart-PtFailedService` | start such services through CIM and wait for them (`-WhatIf` aware) |
 | `Get-PtEventLogSummary` | errors and warnings grouped by provider and event id, or as a timeline |
 | `Get-PtRebootHistory` | planned restarts, unexpected shutdowns and crashes |
@@ -59,6 +59,7 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Get-PtRestoreStatus` | running restores and restore history |
 | `Get-PtAgentJobReport` | Agent jobs: last result, next run, recent failures, failed step |
 | `Get-PtDatabaseSpace` | file sizes, growth settings, volume free space |
+| `Get-PtSqlErrorLog` | the SQL Server or Agent error log with search, time filters and routine messages removed |
 | `Get-PtWaitStats` | top waits without the idle ones, optionally over a sampling interval |
 | `Get-PtDatabaseGrowth` | growth trend per database from the sizes of full backups |
 | `Get-PtBackupChain` | do the log backups since the last full backup form an unbroken chain? |
@@ -78,6 +79,7 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Search-PtJiraIssue`, `Get-PtJiraIssue` | JQL search (enhanced search, page tokens) and single issues as flat objects |
 | `Add-PtJiraAttachment` | attach files (multipart upload, size checked first) |
 | `Get-PtJiraIssueChangelog` | field changes, with the time each old value stood |
+| `Get-PtJiraWorklog` | a person's logged time between two dates |
 | `New-PtJiraIssue`, `Add-PtJiraComment`, `Add-PtJiraWorklog` | create issues, comment, log time |
 | `Get-PtJiraTransition`, `Invoke-PtJiraTransition` | move issues through the workflow |
 | `Find-PtJiraUser` | find account ids by name or e-mail |
@@ -90,7 +92,7 @@ Every command has comment-based help: `Get-Help Get-PtDiskReport -Full`.
 | `Initialize-PtVault`, `Set-PtSecret`, `Get-PtSecret`, `Get-PtSecretInfo`, `Remove-PtSecret` | SecretManagement / SecretStore helpers |
 | `Export-PtReport` | write objects to CSV, JSON, JSON Lines, HTML or Markdown |
 | `ConvertTo-PtMarkdownTable` | objects as a Markdown table for comments and chat |
-| `Format-PtStatusSummary`, `Get-PtStatusSeverity` | "OK: 12, Low: 2, Failed: 1" for any report; good/warn/bad for a status word |
+| `Format-PtStatusSummary`, `Get-PtStatusSeverity` | "OK: 12, Low: 2, Failed: 1" for any report, optionally per group; good/warn/bad for a status word |
 
 ## Daily report
 

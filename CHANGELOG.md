@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.0 - 2026-09
+
+- New: `Get-PtJiraWorklog`, `Get-PtSqlErrorLog`; `examples/New-JiraIssuesForLowDisks.ps1`.
+- `Get-PtServiceTriage -OnlyFailed`; `Format-PtStatusSummary -GroupBy`.
+- `Invoke-DailyReport.ps1` lets the configuration choose the checks.
+- `Invoke-Tests.ps1 -Tag / -ExcludeTag`; the Windows-only tests are tagged.
+- Fixed: `Get-PtBlockingSession` reported the wrong head blocker when a session in the
+  middle of a chain had only just started to wait.
+- Tests for `Get-PtBlockingSession`, `Get-PtDatabaseSpace`, `Get-PtSqlErrorLog`.
+
 ## 2.0.0 - 2026-01
 
 - **Breaking:** requires PowerShell 7.4. PowerShell 7.2 left support in November 2024;
